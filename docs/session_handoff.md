@@ -2,7 +2,7 @@
 
 **Purpose:** Brief a new engineering session on the exact current state of the project and the next concrete actions. This document is operational, not architectural; for system design see `project_spec.md`.
 
-**Last updated:** End of Phase D — flood module shipped, panel wired, live deployment verified.
+**Last updated:** End of Phase E — NDMI module shipped, panel wired, live deployment verified.
 
 ---
 
@@ -14,7 +14,7 @@
 | B | Earth Engine authentication (local OAuth + Cloud service account) | Complete |
 | C | NDVI module, panel wiring, live deployment | Complete |
 | D | Sentinel-1 SAR flood detection | Complete |
-| E | NDMI / drought composite | Not started |
+| E | NDMI / drought composite | Complete |
 | F | Coastal salinity proxy | Not started |
 | G | Bilingual UI, methodology page, exports, polish | Not started |
 | H | YC Startup School 2026 application submission | Not started |
@@ -24,6 +24,7 @@ The live application at `bcra-project-bd.streamlit.app` currently shows:
 - District selectbox (defaults to Khulna; 64 districts available)
 - NDVI line chart for the selected district, 24-month window
 - Latest non-null NDVI value annotated in red
+- NDMI line chart for the selected district, 24-month window (blue line, y-range [-0.5, 0.7]) with latest non-null value annotated
 - Flood extent panel — three metrics (flood-only, permanent water, flood total in km²) and a folium map with red flood pixels over the district outline, fixed to the 2024 monsoon window (May 25 – Jun 30)
 
 ## 2. What Is Working
@@ -32,14 +33,16 @@ The live application at `bcra-project-bd.streamlit.app` currently shows:
 
 - Service account authentication against Earth Engine
 - Per-district NDVI fetch and rendering
+- Per-district NDMI fetch and rendering
 - Per-district flood extent fetch and folium map rendering
-- Streamlit cache (district list 24h, NDVI 1h, flood 6h)
+- Streamlit cache (district list 24h, NDVI 1h, NDMI 1h, flood 6h)
 - District switching (cached districts return instantly; uncached take 20-30s)
 
 ### 2.2 Locally Verified
 
 - `python scripts/verify_ndvi.py` — runs `ndvi_timeseries` on Rangpur and Khulna with 12-month windows; both produce DataFrames with at least 9 of 12 non-null months.
 - `python scripts/verify_flood.py` — runs `flood_extent` on Sylhet over the 2024 monsoon event window (1301.5 km² flood-only) and the dry-season control window (27.9 km²); both assertions pass and reproduce notebook numbers exactly.
+- `python scripts/verify_ndmi.py` — runs `ndmi_timeseries` on Rangpur and Khulna with 12-month windows; both produce ≥9/12 non-null months with all values within the [-0.5, 0.7] sanity range.
 - `streamlit run app.py` — renders the production UI locally using OAuth credentials.
 - Sentinel-1 SAR flood pipeline in `notebooks/02_flood_sandbox.ipynb` — produces correct flood extent for Sylhet 2024 (1301.5 km², 37.4% of district), confirmed against published reporting.
 - Dry-season control test in the same notebook — produces 27.9 km² (0.8% of district), confirming low false-positive rate.
@@ -48,15 +51,17 @@ The live application at `bcra-project-bd.streamlit.app` currently shows:
 
 Files in the repo (relevant to current work):
 
-- `app.py` — Streamlit entry point with NDVI and flood panels wired in
+- `app.py` — Streamlit entry point with NDVI, NDMI, and flood panels wired in
 - `atlas/__init__.py` — empty package marker
 - `atlas/ee_client.py` — dual-mode `init_ee()`
 - `atlas/ndvi.py` — production NDVI module with stacked-band reduction
+- `atlas/moisture.py` — production NDMI module (Sentinel-2 B8/B11, structurally parallel to `ndvi.py`)
 - `atlas/flood.py` — production flood module (Sentinel-1 VV median composite, JRC permanent-water `updateMask`)
 - `requirements.txt` — `streamlit>=1.30`, `earthengine-api>=1.0`, `pandas>=2.2`, `plotly>=5.20`, `folium>=0.20`, `streamlit-folium>=0.20`
 - `notebooks/01_ndvi_sandbox.ipynb` — NDVI sandbox with Rangpur and Khulna validation
 - `notebooks/02_flood_sandbox.ipynb` — flood sandbox with Sylhet 2024 validation and dry-season control
 - `scripts/verify_ndvi.py` — NDVI smoke test
+- `scripts/verify_ndmi.py` — NDMI smoke test (Rangpur and Khulna, ≥9/12 non-null, values within [-0.5, 0.7])
 - `scripts/verify_flood.py` — flood smoke test (Sylhet event > 1000 km², dry-season < 100 km²)
 - `docs/project_spec.md` — architecture document
 - `.gitignore` — excludes `*.log`, `*.html` (HTML pattern was added but may be on a concatenated line; verify)
@@ -74,7 +79,7 @@ Configuration in Streamlit Cloud (not in repo):
 ## 4. What Is Not Started
 
 - `atlas/maps.py` — folium helpers for rendering EE tile layers in Streamlit (the flood panel currently inlines the folium wiring in `app.py`; if a second map indicator joins, factor out)
-- Phase E onward (NDMI, salinity, polish, application)
+- Phase F onward (salinity, polish, application)
 
 ## 5. Next Three Concrete Actions
 
