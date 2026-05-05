@@ -2,7 +2,7 @@
 
 **Purpose:** Brief a new engineering session on the exact current state of the project and the next concrete actions. This document is operational, not architectural; for system design see `project_spec.md`.
 
-**Last updated:** End of Phase D notebook validation, before flood module refactor.
+**Last updated:** End of Phase D flood module refactor; before app panel wiring.
 
 ---
 
@@ -13,7 +13,7 @@
 | A | Local environment, GitHub repo, hello-world Streamlit deploy | Complete |
 | B | Earth Engine authentication (local OAuth + Cloud service account) | Complete |
 | C | NDVI module, panel wiring, live deployment | Complete |
-| D | Sentinel-1 SAR flood detection | Notebook validated, refactor pending |
+| D | Sentinel-1 SAR flood detection | Module shipped and verified; app panel wiring pending |
 | E | NDMI / drought composite | Not started |
 | F | Coastal salinity proxy | Not started |
 | G | Bilingual UI, methodology page, exports, polish | Not started |
@@ -37,6 +37,7 @@ The live application at `bcra-project-bd.streamlit.app` currently shows:
 ### 2.2 Locally Verified
 
 - `python scripts/verify_ndvi.py` — runs `ndvi_timeseries` on Rangpur and Khulna with 12-month windows; both produce DataFrames with at least 9 of 12 non-null months.
+- `python scripts/verify_flood.py` — runs `flood_extent` on Sylhet over the 2024 monsoon event window (1301.5 km² flood-only) and the dry-season control window (27.9 km²); both assertions pass and reproduce notebook numbers exactly.
 - `streamlit run app.py` — renders the production UI locally using OAuth credentials.
 - Sentinel-1 SAR flood pipeline in `notebooks/02_flood_sandbox.ipynb` — produces correct flood extent for Sylhet 2024 (1301.5 km², 37.4% of district), confirmed against published reporting.
 - Dry-season control test in the same notebook — produces 27.9 km² (0.8% of district), confirming low false-positive rate.
@@ -49,10 +50,12 @@ Files in the repo (relevant to current work):
 - `atlas/__init__.py` — empty package marker
 - `atlas/ee_client.py` — dual-mode `init_ee()`
 - `atlas/ndvi.py` — production NDVI module with stacked-band reduction
+- `atlas/flood.py` — production flood module (Sentinel-1 VV median composite, JRC permanent-water `updateMask`)
 - `requirements.txt` — `streamlit>=1.30`, `earthengine-api>=1.0`, `pandas>=2.2`, `plotly>=5.20`
 - `notebooks/01_ndvi_sandbox.ipynb` — NDVI sandbox with Rangpur and Khulna validation
 - `notebooks/02_flood_sandbox.ipynb` — flood sandbox with Sylhet 2024 validation and dry-season control
 - `scripts/verify_ndvi.py` — NDVI smoke test
+- `scripts/verify_flood.py` — flood smoke test (Sylhet event > 1000 km², dry-season < 100 km²)
 - `docs/project_spec.md` — architecture document
 - `.gitignore` — excludes `*.log`, `*.html` (HTML pattern was added but may be on a concatenated line; verify)
 - `LICENSE` — MIT
@@ -69,7 +72,6 @@ Configuration in Streamlit Cloud (not in repo):
 
 ## 4. What Is Not Started
 
-- `atlas/flood.py` — production module derived from the flood sandbox notebook
 - `atlas/maps.py` — folium helpers for rendering EE tile layers in Streamlit
 - Flood panel in `app.py`
 - Phase E onward (NDMI, salinity, polish, application)
@@ -78,7 +80,12 @@ Configuration in Streamlit Cloud (not in repo):
 
 These are the immediate next steps. Execute in order.
 
-### Action 1: Refactor flood pipeline into `atlas/flood.py` using Claude Code
+### Action 1: Refactor flood pipeline into `atlas/flood.py` using Claude Code — DONE
+
+Shipped in commit `e063cd2` on `main`. `atlas/flood.py` exposes `flood_extent(...)` matching the spec; `scripts/verify_flood.py` reproduces the notebook's 1301.5 km² event and 27.9 km² dry-season control. Action 2 is the next step.
+
+Original instructions for reference:
+
 
 In the project root, run:
 
