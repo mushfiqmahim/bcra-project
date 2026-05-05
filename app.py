@@ -2,11 +2,14 @@
 from __future__ import annotations
 
 import ee
+import folium
 import pandas as pd
 import plotly.graph_objects as go
 import streamlit as st
+from streamlit_folium import st_folium
 
 from atlas.ee_client import init_ee
+from atlas.flood import flood_extent
 from atlas.ndvi import ndvi_timeseries
 
 st.set_page_config(
@@ -15,6 +18,9 @@ st.set_page_config(
 )
 
 init_ee()
+
+_FLOOD_START = "2024-05-25"
+_FLOOD_END = "2024-06-30"
 
 
 @st.cache_data(ttl=24 * 3600, show_spinner=False)
@@ -28,6 +34,21 @@ def _load_district_names() -> list[str]:
 @st.cache_data(ttl=3600, show_spinner=False)
 def _cached_ndvi(district_name: str, months: int) -> pd.DataFrame:
     return ndvi_timeseries(district_name, months=months)
+
+
+@st.cache_data(ttl=6 * 3600, show_spinner=False)
+def _cached_flood(district_name: str) -> dict:
+    result = flood_extent(district_name, _FLOOD_START, _FLOOD_END)
+    map_id = result["flood_only_image"].selfMask().getMapId(
+        {"min": 0, "max": 1, "palette": ["red"]}
+    )
+    return {
+        "tile_url": map_id["tile_fetcher"].url_format,
+        "geojson": result["district_geometry"].getInfo(),
+        "flood_only_area_km2": float(result["flood_only_area_km2"]),
+        "permanent_water_area_km2": float(result["permanent_water_area_km2"]),
+        "flood_total_area_km2": float(result["flood_total_area_km2"]),
+    }
 
 
 st.title("Bangladesh Climate Risk Atlas")
@@ -81,3 +102,49 @@ fig.update_layout(
     margin=dict(l=60, r=30, t=60, b=50),
 )
 st.plotly_chart(fig, use_container_width=True)
+
+st.subheader("Flood extent — 2024 monsoon (May 25 – Jun 30)")
+
+with st.spinner(f"Computing flood extent for {district}…"):
+    flood = _cached_flood(district)
+
+flood_cols = st.columns(3)
+flood_cols[0].metric(
+    "Flood-only extent (km²)", f"{flood['flood_only_area_km2']:.1f}"
+)
+flood_cols[1].metric(
+    "Permanent water (km²)", f"{flood['permanent_water_area_km2']:.1f}"
+)
+flood_cols[2].metric(
+    "Flood total (km²)", f"{flood['flood_total_area_km2']:.1f}"
+)
+
+district_layer = folium.GeoJson(
+    flood["geojson"],
+    name="District boundary",
+    style_function=lambda feature: {
+        "color": "black",
+        "weight": 2,
+        "fillOpacity": 0,
+    },
+)
+bounds = district_layer.get_bounds()
+center = [
+    (bounds[0][0] + bounds[1][0]) / 2,
+    (bounds[0][1] + bounds[1][1]) / 2,
+]
+
+fmap = folium.Map(location=center, zoom_start=9, tiles="OpenStreetMap")
+folium.raster_layers.TileLayer(
+    tiles=flood["tile_url"],
+    attr="Google Earth Engine",
+    name="Flood extent (May 25 – Jun 30, 2024)",
+    overlay=True,
+    control=True,
+    opacity=0.6,
+).add_to(fmap)
+district_layer.add_to(fmap)
+fmap.fit_bounds(bounds)
+folium.LayerControl().add_to(fmap)
+
+st_folium(fmap, height=480, use_container_width=True, returned_objects=[])

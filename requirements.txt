@@ -2,3 +2,5 @@ streamlit>=1.30
 earthengine-api>=1.0
 pandas>=2.2
 plotly>=5.20
+folium>=0.20
+streamlit-folium>=0.20
