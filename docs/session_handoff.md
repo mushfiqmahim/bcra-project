@@ -2,7 +2,7 @@
 
 **Purpose:** Brief a new engineering session on the exact current state of the project and the next concrete actions. This document is operational, not architectural; for system design see `project_spec.md`.
 
-**Last updated:** End of Phase D flood module refactor; before app panel wiring.
+**Last updated:** End of Phase D — flood module shipped, panel wired, live deployment verified.
 
 ---
 
@@ -13,7 +13,7 @@
 | A | Local environment, GitHub repo, hello-world Streamlit deploy | Complete |
 | B | Earth Engine authentication (local OAuth + Cloud service account) | Complete |
 | C | NDVI module, panel wiring, live deployment | Complete |
-| D | Sentinel-1 SAR flood detection | Module shipped and verified; app panel wiring pending |
+| D | Sentinel-1 SAR flood detection | Complete |
 | E | NDMI / drought composite | Not started |
 | F | Coastal salinity proxy | Not started |
 | G | Bilingual UI, methodology page, exports, polish | Not started |
@@ -24,6 +24,7 @@ The live application at `bcra-project-bd.streamlit.app` currently shows:
 - District selectbox (defaults to Khulna; 64 districts available)
 - NDVI line chart for the selected district, 24-month window
 - Latest non-null NDVI value annotated in red
+- Flood extent panel — three metrics (flood-only, permanent water, flood total in km²) and a folium map with red flood pixels over the district outline, fixed to the 2024 monsoon window (May 25 – Jun 30)
 
 ## 2. What Is Working
 
@@ -31,7 +32,8 @@ The live application at `bcra-project-bd.streamlit.app` currently shows:
 
 - Service account authentication against Earth Engine
 - Per-district NDVI fetch and rendering
-- Streamlit cache (district list 24h, NDVI 1h)
+- Per-district flood extent fetch and folium map rendering
+- Streamlit cache (district list 24h, NDVI 1h, flood 6h)
 - District switching (cached districts return instantly; uncached take 20-30s)
 
 ### 2.2 Locally Verified
@@ -46,12 +48,12 @@ The live application at `bcra-project-bd.streamlit.app` currently shows:
 
 Files in the repo (relevant to current work):
 
-- `app.py` — Streamlit entry point with NDVI panel wired in
+- `app.py` — Streamlit entry point with NDVI and flood panels wired in
 - `atlas/__init__.py` — empty package marker
 - `atlas/ee_client.py` — dual-mode `init_ee()`
 - `atlas/ndvi.py` — production NDVI module with stacked-band reduction
 - `atlas/flood.py` — production flood module (Sentinel-1 VV median composite, JRC permanent-water `updateMask`)
-- `requirements.txt` — `streamlit>=1.30`, `earthengine-api>=1.0`, `pandas>=2.2`, `plotly>=5.20`
+- `requirements.txt` — `streamlit>=1.30`, `earthengine-api>=1.0`, `pandas>=2.2`, `plotly>=5.20`, `folium>=0.20`, `streamlit-folium>=0.20`
 - `notebooks/01_ndvi_sandbox.ipynb` — NDVI sandbox with Rangpur and Khulna validation
 - `notebooks/02_flood_sandbox.ipynb` — flood sandbox with Sylhet 2024 validation and dry-season control
 - `scripts/verify_ndvi.py` — NDVI smoke test
@@ -68,12 +70,10 @@ Configuration in Streamlit Cloud (not in repo):
 ## 3. What Is Partially Done
 
 - **`.gitignore` formatting.** The `*.log` and `*.html` patterns may be concatenated to the previous line. Open in VS Code and verify each pattern is on its own line.
-- **`requirements.txt` does not include `folium` or `streamlit-folium`.** These are needed for Phase D's flood map panel. They were installed inline in the notebook via `%pip install` but are not pinned for the Cloud build. Add them when refactoring Phase D into the app.
 
 ## 4. What Is Not Started
 
-- `atlas/maps.py` — folium helpers for rendering EE tile layers in Streamlit
-- Flood panel in `app.py`
+- `atlas/maps.py` — folium helpers for rendering EE tile layers in Streamlit (the flood panel currently inlines the folium wiring in `app.py`; if a second map indicator joins, factor out)
 - Phase E onward (NDMI, salinity, polish, application)
 
 ## 5. Next Three Concrete Actions
@@ -155,9 +155,12 @@ git commit -m "Add flood detection module with stacked-image masking"
 git push
 ```
 
-### Action 2: Wire flood panel into `app.py`
+### Action 2: Wire flood panel into `app.py` — DONE
 
-After Action 1 lands cleanly, open Claude Code again with:
+Shipped in commit `ae7674f` on `main`. `app.py` now renders the flood panel below the NDVI chart with three `st.metric` widgets and a folium map (district outline + JRC permanent-water-masked flood overlay) for the fixed 2024-05-25 → 2024-06-30 window. `requirements.txt` gained `folium>=0.20` and `streamlit-folium>=0.20`.
+
+Original instructions for reference:
+
 
 ```
 Wire atlas/flood.py into app.py as a second panel below the NDVI chart.
@@ -191,9 +194,12 @@ git push
 
 Watch the Streamlit Cloud rebuild; folium will install on first build (extra 30-45 seconds in the build log).
 
-### Action 3: Verify live deployment
+### Action 3: Verify live deployment — DONE
 
-After the build completes:
+User confirmed in browser on 2026-05-05: Sylhet renders NDVI + flood metrics + folium map with red flood pixels over ~37% of the district outline; non-flooded districts render the panel with minimal red coverage as expected. Phase D shipped.
+
+Original instructions for reference:
+
 
 1. Open `bcra-project-bd.streamlit.app` in an incognito window.
 2. Switch to Sylhet. Confirm the NDVI chart renders, then the flood map renders below it. The map should show red flood pixels covering roughly 37% of the district outline.
