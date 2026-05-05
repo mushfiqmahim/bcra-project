@@ -12,6 +12,7 @@ from atlas.ee_client import init_ee
 from atlas.flood import flood_extent
 from atlas.moisture import ndmi_timeseries
 from atlas.ndvi import ndvi_timeseries
+from atlas.salinity import is_coastal_district, salinity_seasonal
 
 st.set_page_config(
     page_title="BCRA — Bangladesh Climate Risk Atlas",
@@ -22,6 +23,7 @@ init_ee()
 
 _FLOOD_START = "2024-05-25"
 _FLOOD_END = "2024-06-30"
+_SALINITY_YEAR = 2024
 
 
 @st.cache_data(ttl=24 * 3600, show_spinner=False)
@@ -42,6 +44,11 @@ def _cached_ndmi(
     district_name: str, months: int, end_date: str
 ) -> pd.DataFrame:
     return ndmi_timeseries(district_name, months, end_date)
+
+
+@st.cache_data(ttl=24 * 3600, show_spinner=False)
+def _cached_salinity(district_name: str, year: int) -> dict:
+    return salinity_seasonal(district_name, year)
 
 
 @st.cache_data(ttl=6 * 3600, show_spinner=False)
@@ -200,3 +207,27 @@ fmap.fit_bounds(bounds)
 folium.LayerControl().add_to(fmap)
 
 st_folium(fmap, height=480, use_container_width=True, returned_objects=[])
+
+st.subheader(f"Coastal salinity (Bouaziz SI, {_SALINITY_YEAR})")
+
+if is_coastal_district(district):
+    with st.spinner(f"Computing salinity for {district}…"):
+        salinity = _cached_salinity(district, _SALINITY_YEAR)
+
+    salinity_cols = st.columns(2)
+    dry = salinity["dry_season_si"]
+    monsoon = salinity["monsoon_season_si"]
+    salinity_cols[0].metric(
+        "Dry season (Mar–May)",
+        f"{dry:.3f}" if dry is not None else "N/A",
+    )
+    salinity_cols[1].metric(
+        "Monsoon season (Jul–Sep)",
+        f"{monsoon:.3f}" if monsoon is not None else "N/A",
+    )
+else:
+    st.caption(
+        f"Salinity is computed only for the 19 coastal districts. "
+        f"{district} is inland."
+    )
+
