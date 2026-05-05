@@ -10,6 +10,7 @@ from streamlit_folium import st_folium
 
 from atlas.ee_client import init_ee
 from atlas.flood import flood_extent
+from atlas.moisture import ndmi_timeseries
 from atlas.ndvi import ndvi_timeseries
 
 st.set_page_config(
@@ -34,6 +35,13 @@ def _load_district_names() -> list[str]:
 @st.cache_data(ttl=3600, show_spinner=False)
 def _cached_ndvi(district_name: str, months: int) -> pd.DataFrame:
     return ndvi_timeseries(district_name, months=months)
+
+
+@st.cache_data(ttl=3600, show_spinner=False)
+def _cached_ndmi(
+    district_name: str, months: int, end_date: str
+) -> pd.DataFrame:
+    return ndmi_timeseries(district_name, months, end_date)
 
 
 @st.cache_data(ttl=6 * 3600, show_spinner=False)
@@ -102,6 +110,50 @@ fig.update_layout(
     margin=dict(l=60, r=30, t=60, b=50),
 )
 st.plotly_chart(fig, use_container_width=True)
+
+ndmi_end_date = pd.Timestamp.today().normalize().strftime("%Y-%m-%d")
+with st.spinner(f"Computing NDMI for {district}…"):
+    ndmi_df = _cached_ndmi(district, 24, ndmi_end_date)
+
+ndmi_latest = ndmi_df.dropna(subset=["ndmi"]).tail(1)
+
+ndmi_fig = go.Figure()
+ndmi_fig.add_trace(
+    go.Scatter(
+        x=ndmi_df["date"],
+        y=ndmi_df["ndmi"],
+        mode="lines+markers",
+        name="NDMI",
+        line=dict(color="#0277BD", width=2),
+        marker=dict(size=6),
+        connectgaps=False,
+    )
+)
+if not ndmi_latest.empty:
+    ndmi_latest_date = ndmi_latest["date"].iloc[0]
+    ndmi_latest_value = float(ndmi_latest["ndmi"].iloc[0])
+    ndmi_fig.add_trace(
+        go.Scatter(
+            x=[ndmi_latest_date],
+            y=[ndmi_latest_value],
+            mode="markers+text",
+            marker=dict(color="#D84315", size=12),
+            text=[f"{ndmi_latest_value:.3f}"],
+            textposition="top center",
+            showlegend=False,
+        )
+    )
+
+ndmi_fig.update_layout(
+    title=f"{district} — Monthly Mean NDMI (Sentinel-2, 24 months)",
+    xaxis_title="Month",
+    yaxis_title="NDMI",
+    yaxis=dict(range=[-0.5, 0.7]),
+    template="simple_white",
+    height=440,
+    margin=dict(l=60, r=30, t=60, b=50),
+)
+st.plotly_chart(ndmi_fig, use_container_width=True)
 
 st.subheader("Flood extent — 2024 monsoon (May 25 – Jun 30)")
 
