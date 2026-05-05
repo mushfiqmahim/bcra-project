@@ -2,705 +2,385 @@
 
 **Repository:** `mushfiqmahim/bcra-project`
 **Live application:** https://bcra-project-bd.streamlit.app
-**Status:** Phase C complete (NDVI panel live in production). Phase D in planning.
-**Document version:** 1.0 — Initial specification.
+**Document version:** 2.0 — Refreshed after Phase D notebook completion.
+**Status:** Phase C complete in production; Phase D notebook validated, awaiting refactor and live wiring.
 **Maintainer:** Mushfiq Mahim (mahimm@berea.edu)
-
----
-
-## Table of Contents
-
-1. [Project Overview](#1-project-overview)
-2. [The Problem](#2-the-problem)
-3. [Target Users](#3-target-users)
-4. [Technical Architecture](#4-technical-architecture)
-5. [How the Tools Fit Together](#5-how-the-tools-fit-together)
-6. [Repository Structure](#6-repository-structure)
-7. [Data Sources](#7-data-sources)
-8. [Climate Risk Indicators](#8-climate-risk-indicators)
-9. [Build Phases](#9-build-phases)
-10. [Role of Claude Code](#10-role-of-claude-code)
-11. [Expected Outputs Per Phase](#11-expected-outputs-per-phase)
-12. [Technical Risks and Debugging](#12-technical-risks-and-debugging)
-13. [Deployment Plan](#13-deployment-plan)
-14. [Future Expansion](#14-future-expansion)
-15. [Glossary](#15-glossary)
 
 ---
 
 ## 1. Project Overview
 
-The Bangladesh Climate Risk Atlas (BCRA) is a free, public, web-based dashboard that combines four satellite-derived climate risk signals into one interface, organized at the district level for all of Bangladesh. The four signals are vegetation health, drought stress, flood inundation, and coastal salinity exposure.
+The Bangladesh Climate Risk Atlas (BCRA) is a free, public, web-based geospatial analytics dashboard that exposes satellite-derived climate-risk indicators for every district of Bangladesh through a unified interface. The system fetches imagery and runs reductions on Google Earth Engine, presents results through a Streamlit web application, and is deployed as free public infrastructure on Streamlit Community Cloud.
 
-The tool is delivered as a single-page web application accessible from any browser, with a bilingual interface (English plus basic Bangla labels). It does not require user accounts. All processing happens on demand using Google's Earth Engine cloud compute platform; the application itself is a thin Python program that orchestrates queries, formats results, and renders charts and maps.
+Four climate indicators are planned for the initial release:
 
-The project is intentionally narrow in scope. It is not a farmer advisory app. It is not a forecasting service. It is not a research-grade analytical platform. It is a public-good visualization layer over publicly available satellite data, designed to make existing scientific signals accessible to non-experts.
+1. Vegetation health (NDVI) from Sentinel-2 — implemented and live.
+2. Flood inundation extent from Sentinel-1 SAR — sandbox validated, refactor pending.
+3. Drought and moisture stress (NDMI) from Sentinel-2 — pending.
+4. Coastal salinity proxy from Sentinel-2 spectral combinations — pending.
 
----
+Each indicator is computed at the administrative-district level (FAO GAUL admin level 2), cached aggressively to minimize Earth Engine quota usage, and rendered in the user interface either as a time-series chart (NDVI, NDMI) or as a map overlay (flood, salinity). The system is bilingual (English plus Bangla labels) and operates without user accounts, telemetry, or any payment processing.
 
-## 2. The Problem
+This document is the architectural reference for the system. It describes components, data flow, deployment topology, and the design decisions that shape implementation. It is intended as the first document a new contributor reads.
 
-Bangladesh faces a unique combination of climate risks: monsoon flooding from upstream rivers, cyclone-driven storm surge along the Bay of Bengal, drought in the northwest dry season, and accelerating soil salinity in the southwest coastal belt. These risks intersect with smallholder agriculture, where roughly 80 percent of farmers operate plots smaller than 2 hectares and where livelihoods are tightly coupled to seasonal weather.
+## 2. System Architecture
 
-The data needed to monitor these risks already exists. Sentinel-1 and Sentinel-2 satellites image the country every few days. The European Space Agency provides this imagery free of charge. Google Earth Engine hosts the imagery and provides cloud compute capacity at no cost for non-commercial users. Academic literature has validated specific algorithms for flood detection, drought monitoring, and salinity estimation in the Bangladesh context.
+### 2.1 High-Level Topology
 
-Despite this, no free public dashboard integrates these signals at the district level for non-expert users. The existing options fall into one of three categories:
-
-- **Government services** (BAMIS, FFWC, BMD) provide raw data and forecasts but each agency operates a separate portal with a different audience, different UX, and limited integration. They are designed for agricultural officers and disaster officials, not for public consumption.
-- **Commercial platforms** (Farmonaut, OnGeo, GEOBIS) offer integrated views but operate on B2B subscription models. They do not publish free dashboards; the business model requires lead capture and paid licensing.
-- **Academic research code** (peer-reviewed Sentinel-1 SAR flood mapping algorithms, salinity modeling notebooks, field boundary detection networks) is correct and high-quality, but lives in research repositories and PDFs. None of it is presented as an end-user web tool.
-
-The gap that BCRA fills: a free, public, multi-hazard, district-level web interface that translates validated academic methods into something a journalist, NGO worker, graduate student, or extension officer can browse on a phone in two minutes.
-
----
-
-## 3. Target Users
-
-The application is designed primarily for these user groups, in rough order of expected adoption:
-
-- **Researchers and graduate students** in agriculture, climate science, and development economics who need quick regional snapshots without writing Earth Engine code.
-- **Journalists** covering climate, agriculture, and disaster topics in Bangladesh who need credible, citable, real-time data views.
-- **Local NGOs and development organizations** working on food security, climate adaptation, and disaster preparedness.
-- **Civic developers and data-journalism teams** who can use the site directly and use the underlying open-source code as a starting point for their own analyses.
-- **Agricultural extension officers and NGO field staff** who can show district-level visuals to farmers in the field on a phone.
-
-The application is **not** designed for the following users, even though they may benefit indirectly:
-
-- Individual smallholder farmers as primary users — that audience is already served by SMS-based services (GEOBIS, government extension), voice-message systems, and field officers; an English-and-basic-Bangla web dashboard is not the right interface.
-- Disaster response operators making real-time decisions during active flood events — the data refresh cadence (Sentinel-1 revisits every 6 to 12 days) is too slow for live response, and FFWC remains the authoritative source.
-- Commercial agribusinesses needing field-level precision — those buyers need higher-resolution imagery and field-level subscriptions from commercial vendors.
-
-Being explicit about non-users is a design constraint. It prevents scope creep and keeps UX decisions clean.
-
----
-
-## 4. Technical Architecture
-
-### 4.1 High-Level View
-
-The application follows a four-layer architecture:
+The system is structured as four loosely coupled layers:
 
 ```
-┌─────────────────────────────────────────────────────────────┐
-│  Browser (any user)                                         │
-│    ↓ HTTPS                                                  │
-├─────────────────────────────────────────────────────────────┤
-│  Streamlit Community Cloud (free public hosting)            │
-│    Runs the Python app in a managed container               │
-│    URL: bcra-project-bd.streamlit.app                       │
-│    ↓ Python imports                                         │
-├─────────────────────────────────────────────────────────────┤
-│  Application code (this repo)                               │
-│    app.py                — UI orchestration                 │
-│    atlas/                — domain modules (NDVI, flood, …)  │
-│    data/                 — pre-computed static assets       │
-│    ↓ Earth Engine Python API                                │
-├─────────────────────────────────────────────────────────────┤
-│  Google Earth Engine (server-side compute)                  │
-│    Hosts Sentinel-1, Sentinel-2, JRC Surface Water, GAUL    │
-│    Executes user queries against petabyte-scale archives    │
-└─────────────────────────────────────────────────────────────┘
++-------------------------------------------------------------------+
+| Browser (any user, any device)                                    |
+| - Renders HTML and JavaScript served by Streamlit                 |
++-------------------------------------------------------------------+
+                          | HTTPS over public internet
+                          v
++-------------------------------------------------------------------+
+| Streamlit Community Cloud                                          |
+| - Free public hosting tier                                         |
+| - Watches GitHub main branch; auto-deploys on push                 |
+| - Runs Python interpreter inside ephemeral Linux container         |
+| - URL: bcra-project-bd.streamlit.app                               |
++-------------------------------------------------------------------+
+                          | Python imports
+                          v
++-------------------------------------------------------------------+
+| Application code (this repository)                                 |
+| - app.py    : Streamlit entry point and UI orchestration           |
+| - atlas/    : Domain modules (NDVI, flood, etc.)                   |
+| - data/     : Pre-computed static assets                           |
++-------------------------------------------------------------------+
+                          | Earth Engine Python API
+                          v
++-------------------------------------------------------------------+
+| Google Earth Engine                                                |
+| - Hosts Sentinel-1, Sentinel-2, JRC GSW, FAO GAUL                  |
+| - Authenticates via service account on Cloud, OAuth on local dev   |
+| - Executes reductions and returns small results                    |
++-------------------------------------------------------------------+
 ```
 
-### 4.2 Data Flow on a Single User Request
+### 2.2 Request Lifecycle
 
-When a user opens the app and selects a district:
+When a user opens the live URL and selects a district:
 
-1. The Streamlit container receives an HTTP request and runs the Python script `app.py` from top to bottom.
-2. The script reads the selected district code from Streamlit's session state.
-3. For each of the four indicators, the script calls a function in the `atlas/` package.
-4. Each function constructs an Earth Engine query — a chain of method calls on `ee.ImageCollection` and `ee.Image` objects — and submits it to Google's servers via the Earth Engine Python API.
-5. Google's servers execute the query against the relevant satellite imagery archive and return small structured results: a list of monthly NDVI values, a flood map as a Map ID URL, etc.
-6. The Python script formats the results into Plotly charts and folium maps.
-7. Streamlit serializes the rendered components into HTML and JavaScript and ships the response back to the browser.
-8. The browser displays the dashboard. Subsequent interactions (changing the district, toggling language) trigger Streamlit reruns, but cached results are reused.
+1. Streamlit Cloud receives an HTTP request and runs `app.py` from top to bottom in a fresh Python process (or a warm one if the container is already running).
+2. `init_ee()` from `atlas/ee_client.py` executes; on Cloud it reads the GCP service account credentials from `st.secrets` and initializes Earth Engine. On local development it falls through to user-OAuth credentials.
+3. The cached district list is loaded (24-hour TTL via `@st.cache_data`).
+4. The user picks a district from the selectbox widget.
+5. For each indicator panel, the cached compute function is invoked. On a cache hit, the result returns instantly. On a miss, the function constructs an Earth Engine query graph and submits it via the EE Python API.
+6. Earth Engine executes the query on Google's servers — pulling imagery from its archive, applying compositing and masking operations, and reducing over the district polygon — then returns small structured results (a list of monthly values for time-series indicators, or a tile URL for map indicators).
+7. The Python code formats results: Plotly figures for charts, folium maps with EE tile layers for spatial outputs.
+8. Streamlit serializes the components to HTML, JavaScript, and JSON payloads for the browser.
 
-### 4.3 Key Architectural Decisions
+### 2.3 Component Responsibilities
 
-**Earth Engine for compute, not local processing.** Sentinel-1 and Sentinel-2 imagery is too large to download and process on a free hosting tier. Earth Engine performs the computation on Google's infrastructure and returns small results (numbers, polygons, tile URLs). The application never handles raw imagery.
+| Component | Responsibility |
+|-----------|----------------|
+| `app.py` | UI orchestration, layout, widget state, Streamlit page configuration |
+| `atlas/ee_client.py` | Earth Engine initialization with dual-mode authentication |
+| `atlas/ndvi.py` | NDVI time-series computation (Sentinel-2 ingestion, masking, monthly composites) |
+| `atlas/flood.py` (planned) | Sentinel-1 SAR flood detection |
+| `atlas/moisture.py` (planned) | NDMI and drought composite |
+| `atlas/salinity.py` (planned) | Coastal salinity proxy |
+| `atlas/maps.py` (planned) | folium helpers for EE tile layers |
+| `atlas/i18n.py` (planned) | English/Bangla string lookup |
+| `data/` | Pre-computed static assets (boundaries, baselines, reference layers) |
+| `notebooks/` | Sandbox experimentation, one notebook per indicator |
+| `scripts/` | Smoke tests and operational utilities |
 
-**Streamlit for UI, not a custom web framework.** Streamlit lets us write the entire user interface in Python without HTML, CSS, or JavaScript. For a one-developer project on a one-week timeline, this trades flexibility for velocity. The cost is some loss of design control; the benefit is that the entire codebase remains in one language.
+## 3. Technology Stack
 
-**Service account authentication, not user OAuth.** The deployed application uses a Google Cloud service account to authenticate with Earth Engine. This is required because the standard user-OAuth flow expects an interactive browser sign-in, which is not available in a Streamlit Cloud container.
+### 3.1 Languages and Runtimes
 
-**Caching as a first-class concern.** Earth Engine queries take 5 to 30 seconds. Without caching, every user interaction would feel broken. The application uses Streamlit's `@st.cache_data` decorator aggressively and pre-computes static assets (district boundaries, baseline composites) into the repository as GeoJSON or Parquet files.
+- **Python 3.11** locally on Windows. Streamlit Cloud is currently running Python 3.14.4. The codebase is compatible with both. Avoid 3.12-only features.
+- **JavaScript** is not directly written. Streamlit emits JS automatically; folium produces JS-bearing HTML via Jinja2 templates.
 
-**Pre-computed static layers in the repo.** District boundaries do not change. The 5-year NDVI baseline does not change daily. Storing these as committed files in `data/` removes them from the per-request critical path.
+### 3.2 Core Libraries
 
----
+| Library | Version Pin | Role |
+|---------|-------------|------|
+| `streamlit` | `>=1.30` | Web UI framework; turns Python script into hosted application |
+| `earthengine-api` | `>=1.0` | Python client for Google Earth Engine |
+| `pandas` | `>=2.2` | Tabular data structures for time-series outputs |
+| `plotly` | `>=5.20` | Interactive charts (line, scatter) |
+| `folium` | `>=0.20` | Leaflet-based interactive maps for spatial layers |
+| `streamlit-folium` | future | Component for embedding folium in Streamlit (Phase D wiring) |
 
-## 5. How the Tools Fit Together
+Pinning policy: lower bounds only (`>=`), no upper bounds, no exact pins. This permits Streamlit Cloud's transitive resolver to pick compatible versions without lockfile maintenance. For a single-developer portfolio project this trades reproducibility risk for setup simplicity.
 
-### 5.1 Streamlit
+### 3.3 Justification for Major Choices
 
-Streamlit is a Python library that turns a Python script into a web application. Every widget (text input, selectbox, slider) is a single function call that both renders an HTML element and returns the user's input. The entire application is one or more Python files; Streamlit handles the rest.
+**Streamlit over Flask, FastAPI, or React.** Streamlit produces a hosted web application from a single Python script with no HTML, CSS, or JavaScript. For a single developer building a data-heavy dashboard on a one-week timeline, this trades flexibility for velocity. The cost is minor loss of layout control; the benefit is that the entire codebase is Python.
 
-In this project, Streamlit:
-- Renders the page layout (title, sidebar, four panels)
-- Provides the district selector widget and language toggle
-- Caches results between user interactions
-- Serves the application to browsers
+**Earth Engine over local geospatial processing.** Sentinel-1 GRD imagery is approximately 1 GB per scene; Sentinel-2 SR Harmonized is 0.5 to 1 GB. Processing several scenes per district per indicator requires terabytes of working storage and substantial compute. Earth Engine performs all of this on Google's infrastructure and returns kilobyte-scale results. This is the only architecture that makes the application feasible on a free hosting tier.
 
-We do not write HTML, CSS, JavaScript, or HTTP routing. We do not define endpoints. We do not run a server; Streamlit Community Cloud runs it for us.
+**Streamlit Community Cloud over self-hosted.** Self-hosting requires server administration, TLS, monitoring, and a payment method. Streamlit Cloud handles all of these for free at the cost of cold starts and shared infrastructure. For a portfolio project where uptime requirements are loose and total traffic is bounded, the trade-off is correct.
 
-### 5.2 GitHub
+**Service account authentication over user OAuth in production.** OAuth requires an interactive browser sign-in flow that does not exist in a Streamlit Cloud container. Service accounts are the standard non-human identity for headless workloads in Google Cloud and are the documented path for Earth Engine in deployed applications.
 
-GitHub stores the source code and serves as the deployment trigger.
+## 4. Earth Engine Integration
 
-- **Source of truth:** All code lives in `github.com/mushfiqmahim/bcra-project`. The local laptop, Streamlit Cloud's container, and any contributor's clone all derive from this repository.
-- **Version control:** Every change is a commit with a message. We can revert mistakes, audit history, and branch for experimental features.
-- **Deployment trigger:** Streamlit Cloud watches the `main` branch. When we push, Streamlit Cloud rebuilds the container and redeploys within roughly one minute. There is no separate deploy step.
+### 4.1 Authentication Modes
 
-We use GitHub through standard `git` command-line operations: `git add`, `git commit`, `git push`. We do not use GitHub Actions, GitHub Pages, or other GitHub features for the core flow.
+The `init_ee()` function in `atlas/ee_client.py` is dual-mode:
 
-### 5.3 Google Earth Engine (GEE)
+- **Cloud mode (Streamlit Cloud):** Reads `st.secrets["gcp_service_account"]` (a TOML-formatted block containing the full service account JSON), constructs `ee.ServiceAccountCredentials`, and initializes Earth Engine against project `earth-engine-project-495404`.
+- **Local mode (development laptop):** When `st.secrets` is absent or the secrets key is not present, the function falls through to bare `ee.Initialize(project="earth-engine-project-495404")`, which uses credentials cached by `earthengine authenticate` in the developer's home directory.
 
-Earth Engine is Google's planet-scale geospatial analysis platform. It hosts decades of satellite imagery (Sentinel, Landsat, MODIS, and others), exposes a Python and JavaScript API, and executes computations on Google's servers.
+The function is idempotent. Repeated calls do not reinitialize.
 
-In this project, Earth Engine:
-- Stores Sentinel-1 (radar) and Sentinel-2 (optical) imagery for Bangladesh from 2015 to present
-- Stores administrative boundaries (FAO GAUL dataset) for districts globally including Bangladesh
-- Stores the JRC Global Surface Water dataset, used to mask permanent water bodies out of flood detection
-- Executes our queries: cloud masking, NDVI computation, monthly compositing, flood detection thresholding, and zonal statistics by district
+### 4.2 Project Configuration
 
-We interact with Earth Engine exclusively through the `earthengine-api` Python package. We never download imagery; we describe computations and receive small results.
+- **Google Cloud project ID:** `earth-engine-project-495404`
+- **Project type:** Non-commercial / academic (eligible via Berea College affiliation)
+- **Quota tier:** Earth Engine Community Tier (free, default for non-commercial)
+- **Service account:** `streamlit-runner@earth-engine-project-495404.iam.gserviceaccount.com`
+- **Service account roles:** `Earth Engine Resource Viewer`, `Service Usage Consumer`
 
-### 5.4 Claude Code
+The two-role requirement is non-obvious. `Earth Engine Resource Viewer` alone allows the service account to read EE assets but not to use the project's API quota. `Service Usage Consumer` permits API consumption. Without both, EE calls return HTTP 403 with `Caller does not have required permission to use project ... Grant the caller the roles/serviceusage.serviceUsageConsumer role`.
 
-Claude Code is a command-line agent that operates in the terminal. It can read project files, edit them, run shell commands, and observe the results. It is paired with Claude Opus 4.7 for reasoning.
+### 4.3 Quota and Concurrency Considerations
 
-In this project, Claude Code:
-- Helps draft new functions when given a precise specification
-- Helps debug Earth Engine errors by reading the code, running it, and proposing fixes
-- Helps refactor exploratory notebook code into clean modules
-- Helps write documentation and READMEs
+Earth Engine's Community Tier has known concurrency limits that surface as `429 Too Many concurrent aggregations` when many `reduceRegion` calls run in parallel. The original NDVI implementation hit this limit when constructing a `FeatureCollection` of 24 monthly features each containing a deferred `reduceRegion`; EE evaluated all 24 in parallel server-side and exceeded the cap.
 
-Claude Code does not replace the developer's judgment. The developer is responsible for scoping each task tightly, verifying that suggestions actually run, and rejecting suggestions that introduce unnecessary complexity or hallucinated APIs.
+The current production NDVI pipeline avoids this by stacking N monthly composites into a single multi-band image and performing one `reduceRegion` call. This is the canonical pattern for time-series workloads on Earth Engine and is what new indicator pipelines should use.
 
-### 5.5 The Connection Between All Four
+### 4.4 Catalog Datasets in Use
 
+| Dataset ID | Use | Notes |
+|------------|-----|-------|
+| `COPERNICUS/S2_SR_HARMONIZED` | NDVI, NDMI, salinity | Sentinel-2 Level-2A, harmonized for the 2022 baseline shift |
+| `COPERNICUS/S1_GRD` | Flood detection | Sentinel-1 Ground Range Detected; VV polarization for water |
+| `JRC/GSW1_4/GlobalSurfaceWater` | Permanent water mask | Occurrence band, threshold > 50% defines permanent water |
+| `FAO/GAUL/2015/level2` | District boundaries inside EE | Used for `filterBounds` and `reduceRegion` geometry |
+
+## 5. Data Pipeline Designs
+
+### 5.1 NDVI (Implemented)
+
+Module: `atlas/ndvi.py`
+
+Pipeline:
+
+1. **District resolution.** Filter `FAO/GAUL/2015/level2` by `ADM0_NAME == 'Bangladesh'` and `ADM2_NAME == <district>`; take `.first()` and extract geometry.
+2. **Date window construction.** Compute month starts from `end_date - (months - 1)` to `end_date` inclusive.
+3. **Sentinel-2 ingestion.** Filter `COPERNICUS/S2_SR_HARMONIZED` by district bounds, full date range, and `CLOUDY_PIXEL_PERCENTAGE < 60`.
+4. **Cloud masking.** For each scene, mask cloud and cirrus pixels using QA60 bits 10 and 11. Divide by 10000 to convert from packed integer reflectance to physical reflectance (0 to 1). Preserve `system:time_start` metadata.
+5. **NDVI band computation.** Apply `normalizedDifference(['B8', 'B4'])` to each masked image, rename the result to `NDVI`.
+6. **Monthly compositing with empty-month handling.** For each month, create a band named `ndvi_YYYY_MM`. Use `ee.Algorithms.If` to handle empty months: if the monthly collection has zero scenes, return a fully-masked constant image; otherwise return the mean of the collection's NDVI.
+7. **Stacked-band reduction.** Concatenate all N monthly bands into one `ee.Image` via `ee.Image.cat`, then call `reduceRegion` once with `Reducer.mean()` at scale 100m. This is a single Earth Engine round-trip, not N.
+8. **Client-side framing.** Convert the returned dictionary into a pandas DataFrame with columns `date` (datetime64) and `ndvi` (float64, NaN for empty months). Sort ascending.
+
+Public API:
+```python
+def ndvi_timeseries(
+    district_name: str,
+    months: int = 24,
+    end_date: ee.Date | None = None,
+) -> pd.DataFrame
 ```
-Developer (Mushfiq) writes a function in VS Code with help from Claude Code
-   ↓
-Developer runs `streamlit run app.py` locally; verifies it works
-   ↓
-Developer commits and pushes to GitHub
-   ↓
-Streamlit Cloud detects the push, rebuilds the container
-   ↓
-Streamlit Cloud starts the new app, which authenticates to Google Earth Engine
-   ↓
-First user visits the live URL; the new code serves them
-```
 
-This loop runs many times per day during the build week.
+### 5.2 Flood Detection (Sandbox Validated, Refactor Pending)
 
----
+Reference: `notebooks/02_flood_sandbox.ipynb`
 
-## 6. Repository Structure
+Pipeline:
 
-The current repository has been cleaned up in Phase A. The target structure for the full project is below.
+1. **District geometry.** Same as NDVI.
+2. **Date windows.** Two windows: a pre-flood baseline (typically 2-3 weeks before the event) and a flood window covering the event period.
+3. **Sentinel-1 ingestion.** Filter `COPERNICUS/S1_GRD` by district bounds, with `instrumentMode == 'IW'`, polarization list containing `'VV'`, and orbit pass `'DESCENDING'`. Descending pass is the conventional choice for Bangladesh flood mapping per published literature.
+4. **Median compositing.** Reduce both windows to median composites of the VV band. Median reduces SAR speckle noise more effectively than mean.
+5. **Thresholding.** Apply a threshold of -16 dB to the flood-window VV composite. Pixels below -16 dB are classified as water. This threshold is validated for Bangladesh in Thomas et al. (2019), MDPI Remote Sensing 11:1581.
+6. **Permanent-water masking.** Load `JRC/GSW1_4/GlobalSurfaceWater`, select the `occurrence` band, threshold at `> 50` to define permanent water, `unmask(0)` to remove the dataset's no-data mask. Apply via `flood_water.updateMask(permanent_water.eq(0))`. The `updateMask` route is required; alternatives using `.Not()` or `.subtract()` produce projection-resampling artifacts that under-count flood extent by 70% or more (see `build_log.md` for the diagnostic record).
+7. **Area accounting.** Compute area in square kilometers via `image.multiply(ee.Image.pixelArea()).divide(1e6)` summed within the district polygon.
+
+Validation results (Sylhet, 2024 monsoon event):
+- Flood-only extent: 1,301.5 km² (37.4% of district area)
+- Pre-flood baseline water: 193.5 km²
+- Permanent water (JRC) within district: 102.9 km²
+- Dry-season false-positive control (February-March 2024): 27.9 km² (0.8% of district)
+- Contrast ratio: 47x (flood vs. dry-season)
+
+### 5.3 NDMI / Drought (Planned)
+
+Structurally similar to NDVI: same Sentinel-2 ingestion, same cloud masking, same monthly compositing. The band formula changes from `(B8 - B4) / (B8 + B4)` to `(B8 - B11) / (B8 + B11)`. A drought composite combines NDVI and NDMI anomalies relative to a 5-year baseline.
+
+### 5.4 Coastal Salinity (Planned)
+
+Restricted to the 19 coastal districts (hard-coded list in `data/coastal_districts.json`). Spectral combination from Sarkar et al. (2023), Scientific Reports 13:17056. Output is a single value per district with seasonal context, not a time series. Methodology page documents that this is a remote-sensing proxy, not a calibrated EC measurement.
+
+## 6. Module Structure
 
 ```
 bcra-project/
-├── app.py                          # Streamlit entry point; UI orchestration
-├── requirements.txt                # Python dependencies
-├── runtime.txt                     # Python version pin (3.12)
-├── README.md                       # Public-facing project description
-├── LICENSE                         # MIT
-├── .gitignore                      # Python, venv, secrets, OS files
-│
-├── .streamlit/
-│   ├── config.toml                 # Streamlit theming (colors, fonts)
-│   └── secrets.toml                # NOT committed; contains GCP service account JSON
-│
-├── atlas/                          # Python package for domain logic
-│   ├── __init__.py
-│   ├── ee_client.py                # Earth Engine initialization (local + cloud)
-│   ├── districts.py                # GADM/FAO GAUL boundary loader, district list
-│   ├── ndvi.py                     # Sentinel-2 NDVI time series and anomaly detection
-│   ├── moisture.py                 # NDMI computation, drought stress proxy
-│   ├── flood.py                    # Sentinel-1 SAR flood detection
-│   ├── salinity.py                 # Coastal salinity proxy index
-│   ├── plots.py                    # Plotly chart helpers
-│   ├── maps.py                     # folium map helpers
-│   └── i18n.py                     # English/Bangla string lookup
-│
-├── data/
-│   ├── gadm_bd_admin2.geojson      # Pre-downloaded district boundaries
-│   ├── coastal_districts.json      # List of coastal district codes
-│   └── ndvi_baseline_2019_2023.parquet  # Pre-computed 5-year NDVI baseline (later phase)
-│
-├── notebooks/
-│   ├── 01_ndvi_sandbox.ipynb       # Exploration notebook for Phase C
-│   ├── 02_flood_sandbox.ipynb      # Exploration notebook for Phase D
-│   ├── 03_moisture_sandbox.ipynb   # Exploration notebook for Phase E
-│   └── 04_salinity_sandbox.ipynb   # Exploration notebook for Phase F
-│
-└── docs/
-    ├── project_spec.md             # This document
-    ├── methodology.md              # Public-facing methodology (citations)
-    ├── data_sources.md             # Detailed data source documentation
-    └── deployment.md               # How to deploy from a fresh clone
+|-- app.py                      Streamlit entry point; UI orchestration
+|-- requirements.txt            pip dependency list (lower bounds only)
+|-- runtime.txt                 Python version pin (advisory; cloud may override)
+|-- README.md                   Public-facing project description
+|-- LICENSE                     MIT
+|-- .gitignore                  Excludes secrets, logs, HTML artifacts
+|-- .streamlit/
+|   |-- config.toml             (planned) theme overrides
+|   `-- secrets.toml            NOT committed; for local Cloud-mode testing
+|-- atlas/                      Python package for domain logic
+|   |-- __init__.py             Empty package marker
+|   |-- ee_client.py            Earth Engine init (dual-mode)
+|   |-- ndvi.py                 Sentinel-2 NDVI time series (production)
+|   |-- flood.py                (planned) Sentinel-1 SAR flood detection
+|   |-- moisture.py             (planned) NDMI / drought composite
+|   |-- salinity.py             (planned) coastal salinity proxy
+|   |-- maps.py                 (planned) folium helpers for EE tile layers
+|   `-- i18n.py                 (planned) English / Bangla string dictionaries
+|-- data/
+|   |-- gadm_bd_admin2.geojson  (planned) pre-downloaded boundaries
+|   `-- coastal_districts.json  (planned) coastal district codes
+|-- notebooks/
+|   |-- 01_ndvi_sandbox.ipynb   NDVI sandbox; Rangpur and Khulna validation
+|   `-- 02_flood_sandbox.ipynb  Sentinel-1 flood sandbox; Sylhet 2024 validation
+|-- scripts/
+|   `-- verify_ndvi.py          Smoke test for atlas/ndvi.py
+`-- docs/
+    |-- project_spec.md         This document
+    |-- session_handoff.md      Current state and next actions
+    |-- build_log.md            Chronological development log
+    |-- methodology.md          (planned) Public-facing methodology with citations
+    `-- data_sources.md         (planned) Detailed data source documentation
 ```
 
-### 6.1 Why This Structure
+## 7. Caching Strategy
 
-- **Single entry point at the root.** Streamlit Cloud expects `app.py` (or `streamlit_app.py`) at the root by default. Keeping the entry point thin and the logic in `atlas/` makes the entry point easy to read.
-- **Domain modules in a Python package.** Each climate indicator gets its own module. This forces clean separation of concerns — the NDVI logic does not know about the salinity logic, and vice versa. A new contributor can read one file and understand one indicator.
-- **Static assets in `data/`.** Anything that does not change (boundaries, baselines) lives here. The application reads them from disk, not from Earth Engine, on every request.
-- **Notebooks in `notebooks/`.** These are exploration and validation tools. They are not deployed; they exist so we can debug Earth Engine queries interactively before promoting them to `atlas/` modules.
-- **Documentation in `docs/`.** The project spec, methodology, data sources, and deployment notes live here, separate from the README which stays focused on quick orientation.
+Caching is a first-class concern, not a performance optimization. Earth Engine queries take 5 to 30 seconds; without caching, every district selection would be unusable.
 
-### 6.2 What Each File in `atlas/` Does
+### 7.1 Streamlit Compute Cache (`@st.cache_data`)
 
-| File | Responsibility |
-|---|---|
-| `ee_client.py` | Initialize Earth Engine for local development (user OAuth) and cloud deployment (service account). One function: `init_ee()`. |
-| `districts.py` | Load GADM Bangladesh boundaries. Provide `list_districts()` returning name + code, and `get_geometry(code)` returning an `ee.Geometry`. |
-| `ndvi.py` | Compute Sentinel-2 NDVI monthly time series for a district. Compare current value against a baseline. Return a pandas DataFrame. |
-| `moisture.py` | Compute NDMI (moisture index) and a simple drought-stress composite for a district. Return a pandas DataFrame. |
-| `flood.py` | Sentinel-1 SAR flood detection. Threshold VV polarization, mask permanent water using JRC dataset, return a flood map as an Earth Engine Map ID. |
-| `salinity.py` | Spectral salinity index for coastal districts only. Return a current value and seasonal context. |
-| `plots.py` | Wrappers around Plotly that produce the four panel charts with consistent styling. |
-| `maps.py` | Wrappers around folium that produce the country-level choropleth and district-level overlays. |
-| `i18n.py` | Dictionary of UI strings in English and Bangla. One function: `t(key, lang)`. |
+- **District list:** TTL 24 hours. The list of 64 Bangladesh districts changes never; we cache for 24 hours as a defensive bound.
+- **Per-district NDVI:** TTL 1 hour. New Sentinel-2 imagery becomes available roughly every 5 days; sub-hour freshness is unnecessary.
+- **Per-district flood (planned):** TTL 6 hours. Sentinel-1 revisits every 6 to 12 days; finer granularity is meaningless.
 
----
+Cache keys are derived from function arguments. Two users selecting the same district both hit the cache, so quota usage scales with unique district selections, not page views.
 
-## 7. Data Sources
+### 7.2 Pre-computed Static Assets
 
-All data sources are free, publicly accessible, and used within their stated terms of use.
+Assets that do not depend on user interaction or current data should be pre-computed and committed to `data/`:
 
-### 7.1 Satellite Imagery
+- District boundary GeoJSON (`gadm_bd_admin2.geojson`)
+- Coastal district code list (`coastal_districts.json`)
+- 5-year NDVI baseline composites (planned for Phase G — Parquet format with one column per district)
 
-| Source | Provider | Resolution | Revisit | Use |
-|---|---|---|---|---|
-| Sentinel-2 Level-2A SR Harmonized | ESA Copernicus, hosted on Earth Engine as `COPERNICUS/S2_SR_HARMONIZED` | 10–60 m | 5 days (cloud permitting) | NDVI, NDMI, salinity proxy |
-| Sentinel-1 GRD | ESA Copernicus, hosted on Earth Engine as `COPERNICUS/S1_GRD` | 10 m | 6–12 days | Flood detection (radar penetrates clouds) |
+Pre-computed assets are never regenerated at request time. Updates happen offline on the developer's machine and are committed.
 
-Both are free under the Copernicus open data license. Earth Engine hosts them at no cost for non-commercial users.
+### 7.3 Earth Engine Tile Cache
 
-### 7.2 Boundaries
+For map layers, Earth Engine returns Map IDs whose tile URLs are served from Google's edge cache. Tile fetches do not count against EE compute quota. Rendering the same flood layer to many users is essentially free after the initial computation.
 
-| Source | Provider | Use |
-|---|---|---|
-| FAO GAUL 2015 Level 2 | FAO via Earth Engine: `FAO/GAUL/2015/level2` | District boundaries inside Earth Engine queries |
-| GADM v4.1 admin level 2 | gadm.org | Pre-downloaded GeoJSON for client-side rendering in folium |
+## 8. Deployment Architecture
 
-We use FAO GAUL inside Earth Engine because it is already on the platform and avoids upload steps. We use GADM for the local map rendering because it is more topologically clean.
+### 8.1 Hosting
 
-### 7.3 Auxiliary Datasets
+- **Platform:** Streamlit Community Cloud (free tier).
+- **Trigger:** Watches `mushfiqmahim/bcra-project` `main` branch via GitHub OAuth.
+- **Behavior:** On every push to `main`, Streamlit Cloud rebuilds the container in approximately 30 to 90 seconds. Build failures keep the previous version live; users do not see broken builds.
+- **URL:** https://bcra-project-bd.streamlit.app
+- **Cold start:** 10 to 30 seconds when no recent traffic.
 
-| Source | Provider | Use |
-|---|---|---|
-| JRC Global Surface Water | EC JRC via Earth Engine: `JRC/GSW1_4/GlobalSurfaceWater` | Mask permanent water bodies out of flood detection |
-| NASA POWER | NASA via API at `power.larc.nasa.gov/api` | Daily temperature and precipitation for context (optional, later phase) |
+### 8.2 Build Pipeline
 
-### 7.4 No User-Generated Data
+1. Streamlit Cloud detects the GitHub push.
+2. Container is provisioned; Python interpreter installed.
+3. `requirements.txt` is resolved using `uv pip install`.
+4. Container starts; Uvicorn serves the Streamlit app on port 8501.
+5. First user request triggers `app.py` execution.
 
-The application does not collect, store, or process any user-generated data. There are no accounts, no telemetry beyond Streamlit Cloud's default anonymous request counts, and no user uploads. This is a deliberate constraint: it eliminates data protection obligations, simplifies the privacy story, and reduces the attack surface.
+### 8.3 Rollback
 
----
+Bad deploys are reverted by:
 
-## 8. Climate Risk Indicators
-
-Each indicator is independently computed and rendered in its own panel. The four indicators were chosen based on a review of academic literature on Bangladesh-specific remote sensing and consultation with the build guide's gap analysis.
-
-### 8.1 Vegetation Health (NDVI)
-
-**What it measures:** The Normalized Difference Vegetation Index (NDVI) is computed from the red and near-infrared bands of Sentinel-2 imagery. Values range from -1 to +1; healthy vegetation typically reads 0.5 to 0.9. The index is a proxy for green biomass and crop vigor.
-
-**Formula:** `NDVI = (NIR - RED) / (NIR + RED)`. In Sentinel-2 bands, this is `(B8 - B4) / (B8 + B4)`. The Earth Engine method `image.normalizedDifference(['B8', 'B4'])` computes this in one call.
-
-**What we display:** A 24-month time series of monthly mean NDVI for the selected district, with the current value highlighted and compared against the same calendar month averaged over the previous 5 years (the baseline). An anomaly flag triggers when the current value is more than one standard deviation below the 5-year mean for that month.
-
-**Caveats:** NDVI is sensitive to cloud cover. During monsoon months, cloud-free imagery may be sparse. The application uses a cloud mask based on the QA60 band and shows confidence based on the number of clean observations available. NDVI cannot distinguish crops from natural vegetation; in mixed land cover, the value reflects the average of all green surfaces in the district.
-
-### 8.2 Drought and Moisture Stress (NDMI)
-
-**What it measures:** The Normalized Difference Moisture Index (NDMI) uses the near-infrared and shortwave-infrared bands to estimate vegetation water content. It complements NDVI: NDVI tells us if vegetation is green, NDMI tells us if it is water-stressed.
-
-**Formula:** `NDMI = (NIR - SWIR) / (NIR + SWIR)`. In Sentinel-2 bands, this is `(B8 - B11) / (B8 + B11)`.
-
-**What we display:** A parallel time series to NDVI. We also compute a simple drought-stress composite: `drought_score = -1 * (NDVI_anomaly + NDMI_anomaly) / 2`. Higher scores indicate vegetation that is both browning and drying — a stronger drought signal than either index alone.
-
-**Caveats:** SWIR is also affected by clouds and shadows. The application uses the same cloud mask as NDVI. NDMI does not measure soil moisture directly; it measures canopy moisture, which is a leading indicator of agricultural drought stress but not the same as root-zone water deficit.
-
-### 8.3 Flood Inundation (Sentinel-1 SAR)
-
-**What it measures:** Synthetic Aperture Radar (SAR) emits microwave signals that bounce off the Earth's surface. Smooth surfaces (open water, calm flooded fields) reflect the signal away from the satellite, producing low backscatter values. Rough surfaces (vegetation, buildings, dry soil) scatter the signal back, producing high values. By thresholding the backscatter, we can detect water.
-
-**Algorithm:** We use the VV polarization of Sentinel-1 GRD imagery. For a given month:
-
-1. Filter the Sentinel-1 collection to the district and date range.
-2. Compute a median composite to reduce speckle noise.
-3. Convert to dB scale.
-4. Apply a threshold (typically -16 dB) to classify pixels as water or non-water.
-5. Mask out the permanent water bodies using the JRC Global Surface Water dataset (occurrence > 50 percent over 1984–2021).
-6. The remaining water pixels are inferred flood pixels.
-
-**What we display:** A map layer for the most recent month showing flood pixels in cyan over a basemap. For coastal and flood-prone districts, we also show the same layer for the most recent monsoon peak (typically late August).
-
-**Caveats:** SAR thresholding produces false positives in three known cases: (a) tarmac and other smooth artificial surfaces sometimes read as water; (b) wet rice paddies during transplanting can appear as water and inflate flood estimates; (c) calm inland water bodies missed by the JRC permanent-water mask. The methodology page documents all three. A future phase may incorporate a machine-learning classifier (random forest on VV/VH/incidence-angle features, following Thomas et al. 2019) to reduce false positives.
-
-### 8.4 Coastal Salinity (Spectral Proxy)
-
-**What it measures:** Soil salinity in coastal Bangladesh has been correlated with specific spectral signatures in Landsat and Sentinel-2 imagery. Sarkar et al. (2023, Scientific Reports) and others have published spectral combinations that estimate salinity levels from optical bands.
-
-**Algorithm:** For coastal districts only (a hard-coded list of 19 districts in southern Bangladesh), we compute a salinity index based on a spectral combination from the literature. The exact formula is selected from Sarkar et al. 2023 or one of its citations.
-
-**What we display:** A current snapshot value and a seasonal context (compare to the same season in prior years). We render this as a single number with a color-coded category (low, moderate, high) plus a brief textual interpretation.
-
-**Caveats:** This is a proxy, not a direct measurement. Ground-truth electrical conductivity (EC) values from soil samples are the gold standard; we cannot match that accuracy. The methodology page is explicit about this limitation. The salinity panel is deliberately restricted to coastal districts where the literature has validated the approach; it is not displayed for inland districts.
-
-### 8.5 What We Are Not Building
-
-To prevent scope creep, the following are explicitly out of scope for the initial release:
-
-- Yield prediction
-- Pest or disease detection
-- Field-level (sub-district) analytics
-- Forecasting (next week, next month projections)
-- Push notifications, alerts, or subscriptions
-- User accounts or saved searches
-- Multi-country support
-- Mobile apps (the web app is mobile-responsive, but no native iOS/Android)
-
-Any of these may move into Future Expansion (Section 14) after the initial release.
-
----
-
-## 9. Build Phases
-
-Phase A (scaffolding) is complete. The remaining phases follow.
-
-### Phase B — Earth Engine Authentication (~2 hours)
-
-Goal: Earth Engine works both locally and in production.
-
-Steps:
-1. Run `earthengine authenticate` locally; verify `ee.Initialize(project='earth-engine-project')` succeeds in a Python script.
-2. In Google Cloud Console, create a service account named `streamlit-runner`.
-3. Grant the service account the "Earth Engine Resource Viewer" role.
-4. Create and download a JSON key for the service account.
-5. In Earth Engine's Cloud Console, register the service account email under the project's authorized accounts.
-6. Add the JSON contents to Streamlit Cloud's app secrets under the key `gcp_service_account`.
-7. Implement `atlas/ee_client.py` with an `init_ee()` function that uses service account credentials when running on Streamlit Cloud and falls back to local OAuth otherwise.
-8. Add a small test to `app.py`: print `ee.Number(42).getInfo()` and verify it returns 42 on the live deployment.
-
-### Phase C — First Indicator: NDVI (~1 day)
-
-Goal: One climate indicator working end-to-end with the live app.
-
-Steps:
-1. Download GADM Bangladesh admin level 2 boundaries to `data/gadm_bd_admin2.geojson`.
-2. Implement `atlas/districts.py` to load the GeoJSON and provide a list of district names plus an Earth Engine geometry getter.
-3. Open `notebooks/01_ndvi_sandbox.ipynb` and pull NDVI for Rangpur for the past 24 months. Validate the curve against the agricultural calendar of Bangladesh (rises June–October, falls November–May).
-4. Refactor the working notebook code into `atlas/ndvi.py` with a single function: `ndvi_timeseries(district_code: str, months: int = 24) -> pd.DataFrame`.
-5. Update `app.py` to add a district selector and an NDVI line chart panel. The chart shows the time series with the current value annotated.
-6. Add `@st.cache_data(ttl=3600)` to the NDVI function. Test that switching back to a previously selected district loads instantly.
-7. Commit, push, verify on the live URL.
-
-### Phase D — Flood Layer (~1 day)
-
-Goal: Sentinel-1 SAR flood detection visible as a map layer.
-
-Steps:
-1. Open `notebooks/02_flood_sandbox.ipynb`. Pull Sentinel-1 GRD imagery for one district during a known flood event (the 2024 Sylhet floods is a good benchmark).
-2. Implement the flood detection algorithm step by step in the notebook, testing each step against the visual map.
-3. Compare a pre-flood and post-flood image; verify that flood pixels appear where expected.
-4. Refactor into `atlas/flood.py`: a function that returns an Earth Engine Map ID URL plus summary statistics (flooded area in hectares).
-5. Add `atlas/maps.py` helpers for folium rendering of Earth Engine Map ID layers.
-6. Update `app.py` to add a flood panel below the NDVI panel. The panel shows a folium map of the district with the flood layer overlaid.
-7. Commit, push, verify.
-
-### Phase E — Moisture and Drought Composite (~0.5 day)
-
-Goal: NDMI panel and combined drought score.
-
-Steps:
-1. Open `notebooks/03_moisture_sandbox.ipynb`. NDMI computation is structurally similar to NDVI; reuse the cloud-masking and compositing logic.
-2. Implement `atlas/moisture.py` with `ndmi_timeseries(district_code, months)` and `drought_score(district_code)`.
-3. Update `app.py` with a third panel showing NDMI alongside NDVI on the same chart, plus a drought score badge.
-4. Commit, push, verify.
-
-### Phase F — Coastal Salinity Proxy (~0.5 day)
-
-Goal: Salinity panel for coastal districts.
-
-Steps:
-1. Open `notebooks/04_salinity_sandbox.ipynb`. Implement the salinity index from Sarkar et al. 2023.
-2. Build `data/coastal_districts.json` with the list of 19 coastal district codes.
-3. Implement `atlas/salinity.py` with `salinity_index(district_code)` returning a current value and seasonal context.
-4. Update `app.py` to conditionally render the salinity panel only when a coastal district is selected. For inland districts, hide the panel cleanly.
-5. Commit, push, verify.
-
-### Phase G — Polish, Bilingual UI, Methodology Page (~1 day)
-
-Goal: Production-ready polish.
-
-Steps:
-1. Implement `atlas/i18n.py` with English and Bangla string dictionaries. Wire all UI strings through `t(key, lang)`.
-2. Add a language toggle to the sidebar.
-3. Verify Bangla rendering across all components (Streamlit native widgets render UTF-8 cleanly; folium and Plotly may need font fallbacks).
-4. Build the Methodology page: a Streamlit multipage view at `pages/methodology.py` with citations and limitations for each indicator.
-5. Build the About page: a brief project narrative with links to source code and the underlying data.
-6. Add export buttons to each panel (PNG of the map, CSV of the time series).
-7. Mobile viewport testing; adjust column ratios as needed.
-8. Final pass on `README.md` and `docs/`.
-9. Commit, push, verify.
-
-### Phase H — YC Application Submission (~0.5 day)
-
-Goal: Submit the Y Combinator Startup School 2026 application with the project as a portfolio item.
-
-Steps:
-1. Save a representative Claude Code session transcript from one of the Phase B–G build sessions for the application's required upload.
-2. Update LinkedIn, GitHub profile, and personal site (if applicable) with the live URL and repo link.
-3. Submit the application.
-
-### Total Estimated Time: 6 to 7 working days from end of Phase A to end of Phase H.
-
----
-
-## 10. Role of Claude Code
-
-Claude Code is the development pair-programmer. It is not the developer.
-
-### 10.1 What Claude Code Should Do
-
-- Generate first drafts of well-scoped functions ("write a function with this signature that does this specific thing")
-- Translate working notebook code into clean module functions with docstrings and type hints
-- Debug Earth Engine errors by reading the code, running it, and proposing fixes
-- Write boilerplate (i18n dictionaries, requirements.txt entries, .gitignore patterns)
-- Draft commit messages and pull request descriptions
-- Suggest test cases for tricky logic (cloud masking edge cases, threshold sensitivity)
-
-### 10.2 What Claude Code Should Not Do (Without Verification)
-
-- Invent Earth Engine API methods that do not exist (this happens; always verify against `developers.google.com/earth-engine`)
-- Suggest alternative web frameworks (Flask, FastAPI, React) when Streamlit handles the requirement adequately
-- Refactor working code without a clear reason
-- Write code that uses paid services (Mapbox tokens, AWS, Google Cloud Storage paid tiers)
-- Make architectural changes without explicit instruction
-
-### 10.3 Session Patterns
-
-A productive Claude Code session looks like:
-
-1. **Orient the agent.** First message: "We're working on the BCRA project. The architecture is in `docs/project_spec.md`. Today we're focused on Phase D (flood layer). Read the project spec and `atlas/flood.py` (currently empty) before suggesting changes."
-2. **Set the next concrete sub-task.** "Implement `flood_map(district_code, year, month)` in `atlas/flood.py`. It should return a tuple of `(map_id_url, flooded_hectares)`. Use Sentinel-1 VV polarization with a -16 dB threshold. Mask permanent water using JRC GSW1_4."
-3. **Run and verify.** After Claude writes the code, run it. Fix bugs. Iterate.
-4. **Commit.** Once it works, commit with a clear message.
-
-A typical day might run 4 to 6 such sessions. Save the most instructive session transcript for the YC application upload.
-
-### 10.4 What Sessions to Save for YC
-
-The Y Combinator Startup School application asks for an uploaded Claude Code session. The strongest sessions are not the ones where everything worked first try. They are the ones where:
-
-- The developer encounters a non-obvious bug
-- The developer and Claude Code work through it together
-- The session ends with working code and an explanation of what was wrong
-
-A session where you debug an Earth Engine projection mismatch over 12 messages and end with a clean fix is more compelling than a session where you say "build the app" and Claude writes it linearly.
-
----
-
-## 11. Expected Outputs Per Phase
-
-| Phase | Code Artifact | Live App State | Repo State |
-|---|---|---|---|
-| A (done) | `app.py` hello-world, scaffold | Live URL serves a title and welcome | Clean structure committed |
-| B | `atlas/ee_client.py` | Live URL prints `42` from EE | Service account configured in Streamlit secrets |
-| C | `atlas/districts.py`, `atlas/ndvi.py`, `notebooks/01_*.ipynb` | District selector + NDVI chart | GADM boundaries in `data/`, NDVI working live |
-| D | `atlas/flood.py`, `atlas/maps.py`, `notebooks/02_*.ipynb` | Flood map panel added | Flood layer working live |
-| E | `atlas/moisture.py`, `notebooks/03_*.ipynb` | NDMI on the same chart as NDVI | Drought score badge live |
-| F | `atlas/salinity.py`, `notebooks/04_*.ipynb`, `data/coastal_districts.json` | Salinity panel for coastal districts only | Coastal-conditional UI live |
-| G | `atlas/i18n.py`, `pages/methodology.py`, `pages/about.py`, `docs/methodology.md` | Bilingual, methodology page, exports, mobile-ready | Production-polished |
-| H | YC application submitted | Live and stable | All commits clean |
-
----
-
-## 12. Technical Risks and Debugging
-
-### 12.1 Earth Engine Quota Exhaustion
-
-**Risk:** The Community Tier of Earth Engine is generous but not unlimited. A spike in traffic could throttle the live app.
-
-**Mitigation:**
-- Aggressive use of `@st.cache_data(ttl=3600)` so each district-month combination is computed at most once per hour.
-- Pre-compute the 5-year baseline as a static Parquet file in `data/`. The app reads from disk, not Earth Engine.
-- Pre-compute district boundaries as GeoJSON. No Earth Engine call needed for boundary rendering.
-- For the flood layer, use Earth Engine Map ID URLs (which serve tiles directly from Google's edge cache) rather than re-querying for each render.
-
-**Detection:** Streamlit Cloud surfaces error logs. If we see `EEException: User memory limit exceeded` or `Computation timed out`, the cache is missing or the query is too heavy.
-
-### 12.2 Cloud Cover Blocking Sentinel-2
-
-**Risk:** During monsoon months (June–September), Sentinel-2 imagery is heavily affected by clouds. Some months may have no usable imagery for some districts.
-
-**Mitigation:**
-- Use cloud-mask aggregation on monthly composites; drop pixels with high cloud probability.
-- If a month has no clean pixels, the chart shows a gap rather than a misleading value.
-- The methodology page documents this honestly.
-- Sentinel-1 (radar) is unaffected by clouds; the flood layer continues to work in monsoon.
-
-### 12.3 SAR False Positives
-
-**Risk:** The simple thresholding flood algorithm has known false positives (tarmac, wet rice paddies, calm water bodies missed by the permanent water mask).
-
-**Mitigation:**
-- The methodology page documents the false-positive cases.
-- For the initial release, accept the false positives; the order of magnitude is correct even if the boundaries are approximate.
-- A future phase may replace thresholding with a Random Forest classifier following the published Bangladesh-specific algorithm.
-
-### 12.4 Streamlit Cloud Cold Starts
-
-**Risk:** When the app has not been visited for a while, the first request takes 10 to 30 seconds. A YC reviewer clicking the link may experience this.
-
-**Mitigation:**
-- The README explicitly notes the cold-start behavior; this is universal for free hosting tiers and not a red flag.
-- The first page should render quickly even on a cold start (no Earth Engine call until the user picks a district).
-- Optionally: add a simple cron-style ping (e.g., from a free uptime-monitoring service) that hits the app every 6 hours to keep it warm during the YC review period.
-
-### 12.5 Service Account Key Leak
-
-**Risk:** Accidentally committing the service account JSON to the public repo would compromise the Earth Engine project.
-
-**Mitigation:**
-- The `.gitignore` includes `.streamlit/secrets.toml` and `*.json`.
-- Pre-commit: visually verify `git status` before every push during the build week.
-- If a leak occurs: immediately rotate the key in Google Cloud Console (delete the leaked key, create a new one, update Streamlit secrets). Do not waste time trying to scrub Git history; the key must be considered compromised the moment it is on GitHub.
-
-### 12.6 Bangla Rendering
-
-**Risk:** Bangla text may not render correctly in some chart libraries due to font availability.
-
-**Mitigation:**
-- Streamlit native widgets handle UTF-8 cleanly.
-- For Plotly charts, specify a font that supports Bangla (e.g., `Noto Sans Bengali`).
-- For folium maps, district labels can fall back to Latin transliteration if needed.
-- Test on multiple browsers (Chrome, Firefox, Safari, Mobile Safari).
-
-### 12.7 Debugging Strategy
-
-When something breaks, in order of likelihood:
-
-1. **Check the Streamlit Cloud logs** (Manage app → Logs). The error trace usually points to the file and line.
-2. **Reproduce locally.** If it works locally but fails on Cloud, the cause is environmental: a missing dependency in `requirements.txt`, a Python version mismatch, or a missing secret.
-3. **Bisect with Git.** If a recent commit broke it, `git log --oneline` and identify the suspect commit.
-4. **Earth Engine specific:** Add `print(repr(ee_object))` and `print(ee_object.getInfo())` to inspect intermediate values. Earth Engine errors often appear far from the actual bug due to lazy evaluation.
-
----
-
-## 13. Deployment Plan
-
-### 13.1 Current State
-
-- Repo: `github.com/mushfiqmahim/bcra-project` (public, main branch)
-- Live URL: `bcra-project-bd.streamlit.app`
-- Streamlit Cloud connected via GitHub OAuth, watches `main` branch
-- Auto-deploy on every push to `main`
-
-### 13.2 Deployment Cadence
-
-Every push to `main` triggers a redeploy. During the build week, expect 5 to 15 deploys per day. This is normal and supported.
-
-If a deploy fails (build error, dependency conflict), Streamlit Cloud keeps the previous version running. The user does not see the broken version. This is a major safety net.
-
-### 13.3 Pre-Deploy Checklist
-
-Before pushing to `main`, run locally:
-
-```bash
-streamlit run app.py
 ```
-
-Click through every panel and every district. If anything breaks locally, fix it before pushing. The local environment matches the cloud environment closely enough that most issues surface locally first.
-
-### 13.4 Post-Deploy Verification
-
-After a push:
-
-1. Open the Streamlit Cloud dashboard. Confirm the new build is "Live."
-2. Open the live URL in an incognito window (to avoid cache).
-3. Click through the changed area. Verify the change is visible.
-4. If the build fails, read the logs immediately and fix.
-
-### 13.5 Rollback
-
-If a bad deploy reaches production:
-
-```bash
 git revert HEAD
 git push
 ```
 
-This creates a new commit that undoes the bad one. Streamlit Cloud redeploys with the prior state. The fix is reversible without rewriting history.
+Streamlit Cloud rebuilds with the prior state. No history rewriting; no force-push.
 
-### 13.6 Backup Hosting
+## 9. Security
 
-Streamlit Cloud is the primary host. As a backup, the app can be deployed to Hugging Face Spaces with minimal modification (Spaces also supports Streamlit apps). If Streamlit Cloud has an outage during the YC review period, this is a fallback. We do not actively maintain a backup deployment, but the option exists.
+### 9.1 Service Account Credentials
+
+The Earth Engine service account JSON is sensitive. Treatment:
+
+- **Storage on developer machine:** `C:\Users\mahimm\OneDrive - Berea College\Documents\bcra-secrets\` — outside the repository root.
+- **Storage on Streamlit Cloud:** Streamlit Cloud's Secrets UI (Settings → Secrets) under TOML key `[gcp_service_account]`. Streamlit's secrets store is not visible in build logs or app logs.
+- **Repository exposure:** `.gitignore` excludes `*.json` patterns within the repo root. The `bcra-secrets` directory is outside the repo entirely.
+- **Rotation policy:** Any time a key is exposed (logged conversation, screenshot, file shared outside the intended path), the key is treated as compromised and rotated immediately. This has happened once during development; the prior key is revoked.
+
+### 9.2 Public Repository Surface
+
+The repository is public. This means:
+
+- No secrets are ever committed.
+- Configuration that contains identifiers but not secrets (project ID, service account email) is acceptable to commit.
+- Code review for accidental exposure happens on every commit via `git status` inspection before `git add`.
+
+### 9.3 Streamlit Cloud Trust Model
+
+Streamlit Cloud reads from a public GitHub repository and runs the code in an isolated container. Secrets are injected via an environment-equivalent mechanism. The container itself is not directly addressable by users; only the served HTTP application is exposed.
+
+## 10. Known Limitations
+
+The following limitations are inherent to the design and are documented for transparency.
+
+### 10.1 NDVI
+
+- **Cloud cover during monsoon.** Sentinel-2 is optical and is blocked by clouds. June through September Bangladesh has heavy cloud cover; some monthly composites will return NaN. The UI surfaces this honestly with gaps in the time series rather than interpolation.
+- **Mixed land cover.** NDVI is a district-level mean across all green surfaces. It cannot distinguish crops from natural vegetation, nor identify specific crop types.
+
+### 10.2 Flood Detection
+
+- **Threshold sensitivity.** The -16 dB threshold is a population-level value validated for Bangladesh. It can produce false positives over tarmac, parking lots, and wet rice paddies during transplanting (which appear water-like to SAR).
+- **Median composite hides peak.** The median across the flood window understates the true peak inundation. A user looking at the May 25 - June 30 composite for Sylhet sees the typical inundation across that period, not the worst day.
+- **JRC permanent water mask is conservative.** The 50% occurrence threshold excludes seasonal water (haor edges that are wet 30 to 50% of months) from the permanent layer. Our flood-only count may include normal seasonal expansion of the haor. The dry-season control test confirms this is a small contribution (under 1% of district area).
+- **Projection-resampling artifacts.** Operations that mix images at different native projections (Sentinel-1 at 10m UTM versus JRC GSW at 30m EPSG:4326) require careful method selection. `updateMask` and `where` produce correct results; `Not()`-based and `subtract`-based formulations of the same logical operation produce incorrect results due to fractional resampling values. The diagnostic process is recorded in `build_log.md`.
+
+### 10.3 General
+
+- **Free hosting cold starts.** The first user request after a period of inactivity takes 10 to 30 seconds. Universal across free hosting tiers.
+- **Single-developer pace.** No staging environment; pushes go directly to production. The cost is acceptable given Streamlit Cloud preserves the prior version on bad deploys.
+
+## 11. Future Extensibility
+
+### 11.1 Indicator Additions
+
+Each new indicator is a module under `atlas/` with a public function returning either a DataFrame (time series) or an `ee.Image` plus Map ID URL (spatial). Wiring into `app.py` requires adding a panel that calls the function and renders the output.
+
+Candidate indicators:
+- Cyclone storm-surge risk (bathymetry plus elevation)
+- River-bank erosion (Sentinel-2 time-series shoreline analysis)
+- Heat stress (ECMWF ERA5 reanalysis)
+
+### 11.2 Algorithm Refinement
+
+Current flood detection uses fixed-threshold classification. Production-grade alternatives:
+
+- Random forest classifier on VV, VH, and incidence-angle features (Thomas et al. 2019 algorithm)
+- Otsu adaptive thresholding per-scene
+- Change detection via z-score of pre-flood vs flood-window backscatter
+
+These can be swapped behind the same public API in `atlas/flood.py` without UI changes.
+
+### 11.3 Geographic Expansion
+
+Architecture is country-agnostic. Adding Bhutan, Nepal, or Myanmar requires:
+
+- New boundary dataset (still FAO GAUL, different `ADM0_NAME` filter)
+- New coastal district list for the salinity panel (or omission for landlocked countries)
+- Additional translations in `atlas/i18n.py`
+
+### 11.4 API Surface
+
+A future REST endpoint could expose the same per-district indicators as JSON. Separate module that imports `atlas/*` and exposes via FastAPI or Flask. Streamlit and JSON API can coexist.
 
 ---
 
-## 14. Future Expansion
-
-The following are not part of the initial release but are documented for context. None of them block the YC application; all of them could be added incrementally after launch.
-
-### 14.1 Indicator Improvements
-
-- **Random forest flood classifier.** Replace simple SAR thresholding with the published Bangladesh-specific RF model (Thomas et al. 2019, MDPI Remote Sensing 11:1581). Reduces false positives substantially.
-- **Validated salinity model.** Train a regression model against publicly available soil EC samples from coastal Bangladesh, replacing the spectral proxy with a calibrated estimate.
-- **Crop type classification.** Use a public crop-type dataset (e.g., WorldCereal or Bangladesh-specific surveys) to disaggregate NDVI by crop, providing more interpretable signals.
-
-### 14.2 New Indicators
-
-- **Cyclone storm-surge risk.** Combine bathymetry, elevation (SRTM), and historical surge tracks into a coastal exposure score.
-- **River-bank erosion.** Time-series analysis of riverbank positions from Sentinel-2, particularly for char regions.
-- **Heat stress.** ECMWF ERA5 reanalysis temperature data integrated into a heat-stress index for human and crop exposure.
-
-### 14.3 Functional Features
-
-- **Time slider.** Let users pick any month from 2017 onward to see historical conditions, not just the most recent.
-- **Compare districts.** A comparison view showing two or three districts side-by-side.
-- **Downloadable reports.** A PDF generator that produces a one-page district summary with all four indicators.
-- **API access.** A simple REST endpoint that returns the same data as JSON, enabling third-party integration.
-- **Mobile app.** A React Native or Flutter wrapper around the same data, optimized for field use by extension officers.
-
-### 14.4 Geographic Expansion
-
-The architecture is country-agnostic. Adding a new country (Bhutan, Nepal, Myanmar) requires changing the boundary dataset, the coastal district list, and a few district-name conventions. The four indicators all generalize. The bilingual layer would need additional translations.
-
-### 14.5 Research Direction
-
-If the project sustains beyond the YC application, it could become the basis for a small open research output: a methods paper on integrating multiple remote-sensing indicators for civic transparency in low-income countries. This is well outside the scope of the initial release but is a natural direction.
-
----
-
-## 15. Glossary
-
-- **Backscatter.** The radar signal that bounces back from the Earth's surface to the SAR satellite. Smoother surfaces (water) produce less backscatter.
-- **Composite.** A single image derived by combining multiple satellite passes over the same area, typically to reduce cloud cover or noise. Example: a monthly mean composite averages all clean pixels from a month.
-- **dB (decibel).** Logarithmic unit used to express SAR backscatter. Open water is typically below -16 dB; vegetation is typically above -10 dB.
-- **Earth Engine (GEE).** Google's planetary-scale geospatial analysis platform. Free for non-commercial use. The backbone of this project.
-- **FAO GAUL.** Global Administrative Unit Layers, a free worldwide dataset of administrative boundaries maintained by the FAO and hosted on Earth Engine.
-- **GADM.** A separate global administrative boundary dataset, hosted at gadm.org. We use it for client-side rendering because its files are smaller than GAUL's.
-- **GeoJSON.** A standard text format for geographic features. Human-readable; parseable by every major mapping library.
-- **JRC GSW.** Joint Research Centre Global Surface Water dataset; a global map of permanent and seasonal water bodies. Used to mask out non-flood water.
-- **NDMI.** Normalized Difference Moisture Index; a vegetation water content index from Sentinel-2 NIR and SWIR bands.
-- **NDVI.** Normalized Difference Vegetation Index; a vegetation greenness index from Sentinel-2 NIR and red bands.
-- **QA60.** Quality Assurance band 60 in Sentinel-2 imagery; encodes cloud and cirrus probability per pixel.
-- **SAR.** Synthetic Aperture Radar. Active sensor that emits microwave pulses and measures the return; works through clouds, day or night.
-- **Sentinel-1.** ESA satellite carrying a C-band SAR sensor.
-- **Sentinel-2.** ESA satellite carrying a multispectral optical sensor.
-- **Service account.** A non-human Google Cloud identity used by automated systems to access Google services. Used here for Streamlit Cloud's Earth Engine access.
-- **Streamlit.** A Python library that turns Python scripts into web applications.
-- **VV polarization.** SAR signal that is transmitted vertically and received vertically. The most useful polarization for water detection.
-- **Zonal statistics.** Aggregating raster pixel values within a polygon. Example: mean NDVI inside a district polygon.
-
----
-
-*End of specification. This document is a living artifact; update it as architectural decisions evolve.*
+*End of architectural specification. This document is a living artifact; update it whenever architectural decisions change.*

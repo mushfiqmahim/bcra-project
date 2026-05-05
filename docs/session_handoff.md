@@ -1,0 +1,391 @@
+# BCRA — Session Handoff
+
+**Purpose:** Brief a new engineering session on the exact current state of the project and the next concrete actions. This document is operational, not architectural; for system design see `project_spec.md`.
+
+**Last updated:** End of Phase D notebook validation, before flood module refactor.
+
+---
+
+## 1. Current State Summary
+
+| Phase | Description | Status |
+|-------|-------------|--------|
+| A | Local environment, GitHub repo, hello-world Streamlit deploy | Complete |
+| B | Earth Engine authentication (local OAuth + Cloud service account) | Complete |
+| C | NDVI module, panel wiring, live deployment | Complete |
+| D | Sentinel-1 SAR flood detection | Notebook validated, refactor pending |
+| E | NDMI / drought composite | Not started |
+| F | Coastal salinity proxy | Not started |
+| G | Bilingual UI, methodology page, exports, polish | Not started |
+| H | YC Startup School 2026 application submission | Not started |
+
+The live application at `bcra-project-bd.streamlit.app` currently shows:
+- Title and caption
+- District selectbox (defaults to Khulna; 64 districts available)
+- NDVI line chart for the selected district, 24-month window
+- Latest non-null NDVI value annotated in red
+
+## 2. What Is Working
+
+### 2.1 In Production (Cloud)
+
+- Service account authentication against Earth Engine
+- Per-district NDVI fetch and rendering
+- Streamlit cache (district list 24h, NDVI 1h)
+- District switching (cached districts return instantly; uncached take 20-30s)
+
+### 2.2 Locally Verified
+
+- `python scripts/verify_ndvi.py` — runs `ndvi_timeseries` on Rangpur and Khulna with 12-month windows; both produce DataFrames with at least 9 of 12 non-null months.
+- `streamlit run app.py` — renders the production UI locally using OAuth credentials.
+- Sentinel-1 SAR flood pipeline in `notebooks/02_flood_sandbox.ipynb` — produces correct flood extent for Sylhet 2024 (1301.5 km², 37.4% of district), confirmed against published reporting.
+- Dry-season control test in the same notebook — produces 27.9 km² (0.8% of district), confirming low false-positive rate.
+
+### 2.3 Repository State
+
+Files in the repo (relevant to current work):
+
+- `app.py` — Streamlit entry point with NDVI panel wired in
+- `atlas/__init__.py` — empty package marker
+- `atlas/ee_client.py` — dual-mode `init_ee()`
+- `atlas/ndvi.py` — production NDVI module with stacked-band reduction
+- `requirements.txt` — `streamlit>=1.30`, `earthengine-api>=1.0`, `pandas>=2.2`, `plotly>=5.20`
+- `notebooks/01_ndvi_sandbox.ipynb` — NDVI sandbox with Rangpur and Khulna validation
+- `notebooks/02_flood_sandbox.ipynb` — flood sandbox with Sylhet 2024 validation and dry-season control
+- `scripts/verify_ndvi.py` — NDVI smoke test
+- `docs/project_spec.md` — architecture document
+- `.gitignore` — excludes `*.log`, `*.html` (HTML pattern was added but may be on a concatenated line; verify)
+- `LICENSE` — MIT
+- `README.md` — minimal placeholder
+
+Configuration in Streamlit Cloud (not in repo):
+
+- `gcp_service_account` TOML block under app secrets, populated from the rotated service account JSON
+
+## 3. What Is Partially Done
+
+- **`.gitignore` formatting.** The `*.log` and `*.html` patterns may be concatenated to the previous line. Open in VS Code and verify each pattern is on its own line.
+- **`requirements.txt` does not include `folium` or `streamlit-folium`.** These are needed for Phase D's flood map panel. They were installed inline in the notebook via `%pip install` but are not pinned for the Cloud build. Add them when refactoring Phase D into the app.
+
+## 4. What Is Not Started
+
+- `atlas/flood.py` — production module derived from the flood sandbox notebook
+- `atlas/maps.py` — folium helpers for rendering EE tile layers in Streamlit
+- Flood panel in `app.py`
+- Phase E onward (NDMI, salinity, polish, application)
+
+## 5. Next Three Concrete Actions
+
+These are the immediate next steps. Execute in order.
+
+### Action 1: Refactor flood pipeline into `atlas/flood.py` using Claude Code
+
+In the project root, run:
+
+```cmd
+cd C:\Users\mahimm\Downloads\BCRA
+claude
+```
+
+Open Claude Code with this scoped prompt:
+
+```
+We are working on the BCRA project (Bangladesh Climate Risk Atlas).
+
+Context to read first, in order:
+1. docs/project_spec.md - architectural reference
+2. docs/session_handoff.md - current state
+3. notebooks/02_flood_sandbox.ipynb - the working flood pipeline to be refactored
+4. atlas/ndvi.py - the established pattern for atlas modules
+
+Task: refactor the working Sentinel-1 SAR flood pipeline from the
+sandbox notebook into a new module atlas/flood.py.
+
+Public API:
+    def flood_extent(
+        district_name: str,
+        flood_start: str,           # ISO date 'YYYY-MM-DD'
+        flood_end: str,
+        pre_start: str | None = None,   # defaults to flood_start - 25 days
+        pre_end: str | None = None,     # defaults to flood_start - 5 days
+        orbit_pass: str = 'DESCENDING',
+        threshold_db: float = -16,
+    ) -> dict
+returning a dict with keys:
+    'flood_only_image': ee.Image     # the masked flood-only mask
+    'flood_only_area_km2': float
+    'permanent_water_area_km2': float
+    'flood_total_area_km2': float
+    'district_geometry': ee.Geometry # for downstream rendering
+
+Internal implementation requirements:
+1. Use updateMask(permanent_water.eq(0)) for the permanent-water removal step.
+   Do NOT use .Not() or .subtract() — those produce projection artifacts.
+   See docs/build_log.md section 'Phase D diagnostic' for the record.
+2. Use median compositing (not mean) for SAR speckle reduction.
+3. Use ee.Algorithms.If for empty pre-flood window handling.
+4. Caller is responsible for init_ee(), as in atlas/ndvi.py.
+5. No tutorial-style comments. Type hints on the public function only.
+6. Internal helpers (_district_geometry, _vv_composite) prefixed with underscore.
+
+Also create scripts/verify_flood.py that:
+1. Calls init_ee()
+2. Runs flood_extent for Sylhet over 2024-05-25 to 2024-06-30
+3. Asserts flood_only_area_km2 > 1000 (the validated event was 1301.5)
+4. Runs the same call for the dry-season control window 2024-02-25 to 2024-03-31
+5. Asserts the dry-season flood_only_area_km2 < 100
+
+Do not modify app.py. Do not commit. Show the files when done.
+```
+
+Verify locally with `python scripts/verify_flood.py`. Both assertions should pass. Numbers should match notebook output to within 1%.
+
+If the smoke test passes, commit:
+
+```cmd
+git add atlas/flood.py scripts/verify_flood.py
+git commit -m "Add flood detection module with stacked-image masking"
+git push
+```
+
+### Action 2: Wire flood panel into `app.py`
+
+After Action 1 lands cleanly, open Claude Code again with:
+
+```
+Wire atlas/flood.py into app.py as a second panel below the NDVI chart.
+
+Requirements:
+1. Add folium and streamlit-folium to requirements.txt (lower bounds only).
+2. Use a fixed flood-event window for the initial release: 2024-05-25 to
+   2024-06-30 (the documented Sylhet event). Show this for ALL districts
+   for now; per-district event windows are a Phase G concern.
+3. Render the flood extent on a folium map with:
+   - District geometry as a black outline
+   - Flood-only pixels in red (semi-transparent)
+   - OpenStreetMap basemap
+   - LayerControl panel for toggling
+4. Display the area numbers as a metric row above the map:
+   flood_only_area_km2, permanent_water_area_km2, % of district
+5. Cache the flood compute with @st.cache_data(ttl=6*3600)
+
+Do not modify atlas/flood.py. Do not commit.
+```
+
+Test locally: `streamlit run app.py`. Confirm both panels render for Sylhet (where flood is the focal validation case) and a non-flood district (where flood-only should still render but show much less coverage).
+
+Commit and push:
+
+```cmd
+git add app.py requirements.txt
+git commit -m "Wire flood panel into app with folium map rendering"
+git push
+```
+
+Watch the Streamlit Cloud rebuild; folium will install on first build (extra 30-45 seconds in the build log).
+
+### Action 3: Verify live deployment
+
+After the build completes:
+
+1. Open `bcra-project-bd.streamlit.app` in an incognito window.
+2. Switch to Sylhet. Confirm the NDVI chart renders, then the flood map renders below it. The map should show red flood pixels covering roughly 37% of the district outline.
+3. Switch to a non-coastal, non-Sylhet district (e.g., Rangpur). Confirm the flood map still renders but shows minimal flood pixels (this is correct — Rangpur was not heavily flooded in May-June 2024).
+4. If both render correctly, Phase D is shipped. Update `docs/session_handoff.md` Phase D status to "Complete" and commit.
+
+If the live build fails, the Streamlit Cloud log is the first place to look. Common failure: missing dependency for folium's transitive needs. Add to `requirements.txt`, push again.
+
+## 6. Known Friction Points
+
+These are issues that have already been encountered and resolved. New work should benefit from this list rather than rediscovering them.
+
+### 6.1 Earth Engine projection artifacts
+
+**Symptom:** A logical operation that should yield X km² of flood extent returns approximately X/4 km² instead.
+
+**Cause:** EE operations on images with different native projections (Sentinel-1 at 10m UTM versus JRC GSW at 30m EPSG:4326) trigger internal resampling. Boolean operations like `.Not()` and arithmetic `subtract` collapse fractional resampled values incorrectly.
+
+**Fix:** Use `updateMask(other.eq(0))` for boolean exclusion. Use multiplication for area-weighted intersection (it preserves fractional values). Use `where(condition, value)` for conditional replacement. Avoid `.Not()` chained with multiplication and avoid `subtract` between binary images derived from multi-projection sources.
+
+### 6.2 Earth Engine concurrency limit
+
+**Symptom:** `HttpError 429: Too many concurrent aggregations`.
+
+**Cause:** A FeatureCollection containing N features each with a `reduceRegion` evaluates all N reductions in parallel server-side. Community Tier hits the per-user concurrency cap around 20-30 parallel reductions.
+
+**Fix:** Stack N inputs into a single multi-band image and reduce once. This is the production NDVI pattern.
+
+### 6.3 Streamlit Cloud Python version
+
+**Symptom:** `runtime.txt` says `3.12` but logs show Python 3.14.4.
+
+**Cause:** Streamlit Cloud may ignore or override `runtime.txt`. The codebase is compatible.
+
+**Fix:** Don't depend on a specific Python version. Avoid 3.12-only features.
+
+### 6.4 Empty `requirements.txt` blocks deploys
+
+**Symptom:** Cloud build runs but `import ee` fails at runtime with `ModuleNotFoundError: No module named 'ee'`.
+
+**Cause:** Streamlit Cloud auto-detects bare `import streamlit` if `requirements.txt` is empty, but does not extend that detection to other packages.
+
+**Fix:** Always populate `requirements.txt` with explicit lower-bound pins.
+
+### 6.5 Service account roles
+
+**Symptom:** `HttpError 403: Caller does not have required permission to use project ... Grant the caller the roles/serviceusage.serviceUsageConsumer role`.
+
+**Cause:** Service account has `Earth Engine Resource Viewer` but lacks `Service Usage Consumer`.
+
+**Fix:** Grant both roles in IAM. Both are required.
+
+### 6.6 OneDrive-synced credentials
+
+**Symptom:** Service account JSON in `Documents/bcra-secrets/` does not appear in `Documents/`.
+
+**Cause:** Default Documents folder is OneDrive-synced; physical path is `OneDrive - Berea College/Documents/`.
+
+**Fix:** Use right-click → Copy as path to get the real path. The OneDrive sync itself is acceptable for this project, but the credential stored there is treated as compromised if leaked anywhere outside the intended path.
+
+### 6.7 PowerShell command compatibility
+
+**Symptom:** Commands like `Add-Content` and `Set-Clipboard` work in PowerShell but fail in cmd.exe with `'Add-Content' is not recognized as an internal or external command`.
+
+**Cause:** PowerShell cmdlets are not part of cmd.exe.
+
+**Fix:** Use cmd-compatible alternatives (`echo *.log >> .gitignore`) or open PowerShell explicitly.
+
+### 6.8 Concatenated cmd commands
+
+**Symptom:** `git statusgit commit -m "..."` returns `'statusgit' is not a git command`.
+
+**Cause:** Two terminal commands pasted as one without a newline in between.
+
+**Fix:** Run each command separately. When copying from chat, copy one line at a time.
+
+### 6.9 Git push rejected after web-UI edit
+
+**Symptom:** `git push` rejected with `Updates were rejected because the remote contains work that you do not have locally`.
+
+**Cause:** A commit was made on origin (likely via GitHub web UI) that is not on the local machine.
+
+**Fix:** `git pull --rebase origin main`, then `git push`.
+
+### 6.10 Empty Jupyter notebook commit
+
+**Symptom:** `git commit` on a new `.ipynb` file shows `0 insertions(+), 0 deletions(-)` and the file appears empty on GitHub.
+
+**Cause:** VS Code holds notebook content in memory but does not always flush to disk before the file is staged.
+
+**Fix:** Press Ctrl+S to force-save the notebook before `git add`.
+
+## 7. Environment Details
+
+### 7.1 Developer Machine
+
+- **OS:** Windows 11
+- **Project root:** `C:\Users\mahimm\Downloads\BCRA`
+- **Python:** 3.11 (system install at `C:\Users\mahimm\AppData\Local\Programs\Python\Python311\`)
+- **Editor:** VS Code with Python and Jupyter extensions
+- **Shell:** cmd.exe (the project's known terminal). PowerShell is also available but commands have been written for cmd.
+- **Git:** 2.54 at `C:\Users\mahimm\AppData\Local\Programs\Git\bin\git.exe`
+- **Node.js:** 24.15.0
+- **npm:** 11.12.1
+- **Claude Code:** installed via `npm install -g @anthropic-ai/claude-code`; authenticated to Anthropic
+
+### 7.2 Streamlit Cloud
+
+- **Python:** 3.14.4 (chosen by Streamlit Cloud)
+- **Package manager:** `uv pip install`
+- **Container:** Debian-based Linux
+
+### 7.3 Earth Engine
+
+- **Local auth:** OAuth via `earthengine authenticate` (credentials cached in `~/.config/earthengine/credentials`)
+- **Cloud auth:** Service account `streamlit-runner@earth-engine-project-495404.iam.gserviceaccount.com`
+- **Service account JSON:** `C:\Users\mahimm\OneDrive - Berea College\Documents\bcra-secrets\earth-engine-project-495404-795bc480f53d.json`
+- **Project ID:** `earth-engine-project-495404`
+- **Quota tier:** Community (free, non-commercial)
+
+## 8. Earth Engine Setup Status
+
+### 8.1 Local
+
+Confirmed working with `python -c "import ee; ee.Initialize(project='earth-engine-project-495404'); print(ee.Number(7).add(8).getInfo())"` returning 15.
+
+### 8.2 Cloud
+
+Confirmed working — the live app's NDVI panel successfully fetches Sentinel-2 data, which requires service-account auth.
+
+The TOML secret block in Streamlit Cloud is structured as:
+
+```toml
+[gcp_service_account]
+type = "service_account"
+project_id = "earth-engine-project-495404"
+private_key_id = "..."
+private_key = "-----BEGIN PRIVATE KEY-----\n...\n-----END PRIVATE KEY-----\n"
+client_email = "streamlit-runner@earth-engine-project-495404.iam.gserviceaccount.com"
+client_id = "..."
+auth_uri = "https://accounts.google.com/o/oauth2/auth"
+token_uri = "https://oauth2.googleapis.com/token"
+auth_provider_x509_cert_url = "https://www.googleapis.com/oauth2/v1/certs"
+client_x509_cert_url = "..."
+universe_domain = "googleapis.com"
+```
+
+If a key rotation is required, regenerate the JSON via `Add Key` in the GCP service accounts UI, regenerate the TOML via the helper command in `build_log.md`, and paste the result into Streamlit Cloud's secrets UI.
+
+## 9. Key File and URL References
+
+### 9.1 URLs
+
+- **GitHub repo:** https://github.com/mushfiqmahim/bcra-project
+- **Live app:** https://bcra-project-bd.streamlit.app
+- **Streamlit Cloud dashboard:** https://share.streamlit.io
+- **GCP IAM:** https://console.cloud.google.com/iam-admin/iam?project=earth-engine-project-495404
+- **GCP service accounts:** https://console.cloud.google.com/iam-admin/serviceaccounts?project=earth-engine-project-495404
+- **Earth Engine docs:** https://developers.google.com/earth-engine/guides
+
+### 9.2 Critical local paths
+
+- Project root: `C:\Users\mahimm\Downloads\BCRA`
+- Service account JSON: `C:\Users\mahimm\OneDrive - Berea College\Documents\bcra-secrets\earth-engine-project-495404-795bc480f53d.json`
+- Earth Engine OAuth credentials: `C:\Users\mahimm\.config\earthengine\credentials`
+
+### 9.3 Working terminal commands
+
+```cmd
+:: Activate project
+cd C:\Users\mahimm\Downloads\BCRA
+
+:: Run app locally (uses OAuth)
+streamlit run app.py
+
+:: Smoke test NDVI module
+python scripts/verify_ndvi.py
+
+:: Open Claude Code
+claude
+
+:: Standard git flow
+git status
+git add <files>
+git commit -m "..."
+git push
+```
+
+## 10. Working Conventions
+
+These were established during development and should be preserved.
+
+- **Tone:** Professional, concise, no marketing language, no emojis.
+- **Step-by-step pacing:** When walking through new work, move one step at a time and wait for output before continuing. Especially important for unfamiliar domains (Earth Engine, SAR, etc).
+- **Authoritative diagnosis:** When code fails, identify the cause from evidence rather than guessing. The diagnostic process matters as much as the fix.
+- **Commit discipline:** `git status` before every `git add`. Explicit file paths in `git add` instead of `git add .` to avoid accidentally staging secrets or junk.
+- **Validation discipline:** Every new pipeline gets a happy path validation (Sylhet 2024 for flood) and a control test (dry-season for flood). Numbers must be order-of-magnitude reasonable against published external sources.
+- **Documentation discipline:** When a non-obvious lesson is learned (e.g., the projection artifact issue), it goes into `build_log.md` with the diagnostic record so it isn't relearned.
+
+---
+
+*End of session handoff. Update Phase status table at top whenever a phase completes.*
