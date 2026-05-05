@@ -2,7 +2,7 @@
 
 **Repository:** `mushfiqmahim/bcra-project`
 **Live application:** https://bcra-project-bd.streamlit.app
-**Status:** Phase A complete (scaffold and live deployment). Phase B in planning.
+**Status:** Phase C complete (NDVI panel live in production). Phase D in planning.
 **Document version:** 1.0 — Initial specification.
 **Maintainer:** Mushfiq Mahim (mahimm@berea.edu)
 

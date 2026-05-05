@@ -1,0 +1,36 @@
+﻿python : 
+2026-05-05 
+13:59:14.149 
+Uvicorn server 
+started on 
+0.0.0.0:8765
+At line:1 char:1
++ python -m 
+streamlit run 
+app.py --server.hea
+dless=true 
+--server.port=8 ...
++ ~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~
+    + CategoryInfo 
+             : No  
+  tSpecified: (2   
+ 026-05-05 13:5    
+...on 0.0.0.0:    
+8765:String) [    
+], RemoteExcep    
+tion
+    + FullyQualifi 
+   edErrorId : Na  
+  tiveCommandErr   
+ or
+ 
+
+  You can now view your Streamlit app in your browser.
+
+  Local URL: http://localhost:8765
+  Network URL: http://11.23.7.79:8765
+  External URL: http://76.78.177.65:8765
+
