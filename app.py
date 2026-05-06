@@ -108,6 +108,33 @@ def _bounds_from_geojson(geom: dict) -> list[list[float]] | None:
     return [[min(lats), min(lons)], [max(lats), max(lons)]]
 
 
+def _flatten_to_multipolygon(geom: dict) -> dict:
+    """Normalize an EE-returned GeoJSON geometry to a folium-traversable shape.
+
+    EE's getInfo() can return GeometryCollection for districts with complex
+    multi-island coastlines (e.g., Khulna's Sundarbans). Folium 0.20's
+    iter_coords assumes every Feature's geometry has a `coordinates` key,
+    which GeometryCollection does not — its sub-geometries live under
+    `geometries`. We flatten any GeometryCollection of Polygon/MultiPolygon
+    members into a single MultiPolygon. Other shapes pass through unchanged.
+    """
+    if not isinstance(geom, dict):
+        return geom
+    if geom.get("type") == "Feature":
+        geom = geom.get("geometry") or {}
+    if geom.get("type") != "GeometryCollection":
+        return geom
+
+    rings: list = []
+    for sub in geom.get("geometries", []):
+        sub_type = sub.get("type")
+        if sub_type == "Polygon":
+            rings.append(sub.get("coordinates", []))
+        elif sub_type == "MultiPolygon":
+            rings.extend(sub.get("coordinates", []))
+    return {"type": "MultiPolygon", "coordinates": rings}
+
+
 @st.cache_data(ttl=6 * 3600, show_spinner=False)
 def _cached_flood(district_name: str) -> dict:
     result = flood_extent(district_name, _FLOOD_START, _FLOOD_END)
@@ -128,7 +155,7 @@ def _cached_flood(district_name: str) -> dict:
     return {
         "tile_url": tile_url,
         "map_error_type": map_error_type,
-        "geojson": result["district_geometry"].getInfo(),
+        "geojson": _flatten_to_multipolygon(result["district_geometry"].getInfo()),
         "flood_only_area_km2": float(result["flood_only_area_km2"]),
         "permanent_water_area_km2": float(result["permanent_water_area_km2"]),
         "flood_total_area_km2": float(result["flood_total_area_km2"]),
