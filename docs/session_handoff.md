@@ -2,7 +2,7 @@
 
 **Purpose:** Brief a new engineering session on the exact current state of the project and the next concrete actions. This document is operational, not architectural; for system design see `project_spec.md`.
 
-**Last updated:** End of Phase G.4.a — theme, sidebar chrome, and footer shipped and live; remaining G.4 polish (spacing, mobile review) pending.
+**Last updated:** End of Phase G — all polish (methodology page, exports, bilingual UI, theme, sidebar chrome, footer, panel spacing) shipped and live.
 
 ---
 
@@ -16,7 +16,7 @@
 | D | Sentinel-1 SAR flood detection | Complete |
 | E | NDMI / drought composite | Complete |
 | F | Coastal salinity proxy | Complete |
-| G | Bilingual UI, methodology page, exports, polish | G.1, G.2, G.3.a, G.3.b, and G.4.a (theme/chrome/footer) complete; remaining G.4 polish pending |
+| G | Bilingual UI, methodology page, exports, polish | Complete |
 | H | YC Startup School 2026 application submission | Not started |
 
 The live application at `bcra-project-bd.streamlit.app` currently shows:
@@ -31,6 +31,7 @@ The live application at `bcra-project-bd.streamlit.app` currently shows:
 - "Download CSV" button below each indicator panel (NDVI, NDMI, flood, salinity); salinity button gated to coastal districts. Filenames follow `bcra_<indicator>_<slug>_<window>.csv` with apostrophes stripped and whitespace replaced by underscore.
 - Sidebar "Language / ভাষা" radio with English (default) and বাংলা options on every page; selection persists across pages via `st.session_state["language"]`. All 98 keys have populated Bangla values; technical acronyms (NDVI, NDMI, SAR, B-band identifiers, dataset IDs) and citations stay verbatim per academic-Bangla convention.
 - Earth-green Streamlit theme via `.streamlit/config.toml` (primaryColor `#3D6B47`); shared sidebar chrome (project name + tagline + language radio + GitHub link) and three-piece page footer (project name · GitHub · Methodology) rendered consistently on both pages.
+- Horizontal-rule dividers between consecutive indicator panels for consistent visual rhythm across NDVI, NDMI, flood, and salinity sections.
 
 ## 2. What Is Working
 
@@ -103,7 +104,6 @@ Configuration in Streamlit Cloud (not in repo):
 ## 4. What Is Not Started
 
 - `atlas/maps.py` — folium helpers for rendering EE tile layers in Streamlit (the flood panel currently inlines the folium wiring in `app.py`; if a second map indicator joins, factor out)
-- Phase G.4.b onward — remaining polish (spacing pass on dense panels, mobile/narrow-viewport review, optional Streamlit `runtime.txt` revisit)
 - Phase H — YC Startup School 2026 application submission
 
 ## 5. Next Three Concrete Actions
