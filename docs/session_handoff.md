@@ -2,7 +2,7 @@
 
 **Purpose:** Brief a new engineering session on the exact current state of the project and the next concrete actions. This document is operational, not architectural; for system design see `project_spec.md`.
 
-**Last updated:** Post-Phase G hot-fix — flood map tile generation now degrades gracefully on production (service account `getMapId` failure no longer crashes the page); IAM root cause still under investigation.
+**Last updated:** Post-Phase G hot-fixes complete — IAM unblocked `getMapId`, and folium's bare-GeoJSON `iter_coords` crash replaced with a custom bounds extractor; flood map renders normally in production. Defensive `try/except` and `bounds is None` fallback remain as safety nets.
 
 ---
 
@@ -32,7 +32,6 @@ The live application at `bcra-project-bd.streamlit.app` currently shows:
 - Sidebar "Language / ভাষা" radio with English (default) and বাংলা options on every page; selection persists across pages via `st.session_state["language"]`. All 98 keys have populated Bangla values; technical acronyms (NDVI, NDMI, SAR, B-band identifiers, dataset IDs) and citations stay verbatim per academic-Bangla convention.
 - Earth-green Streamlit theme via `.streamlit/config.toml` (primaryColor `#3D6B47`); shared sidebar chrome (project name + tagline + language radio + GitHub link) and three-piece page footer (project name · GitHub · Methodology) rendered consistently on both pages.
 - Horizontal-rule dividers between consecutive indicator panels for consistent visual rhythm across NDVI, NDMI, flood, and salinity sections.
-- Flood panel degrades gracefully when `getMapId` fails on the production service account: metrics + GeoJSON-derived data still render, the folium map is replaced by an `st.info` callout pointing the user at the still-valid numerical metrics, and the full traceback is logged via `logging.exception` for diagnosis.
 
 ## 2. What Is Working
 
@@ -323,13 +322,21 @@ These are issues that have already been encountered and resolved. New work shoul
 
 **Fix:** Press Ctrl+S to force-save the notebook before `git add`.
 
-### 6.11 Flood map tile generation fails on Streamlit Cloud (open)
+### 6.11 Flood map tile generation fails on Streamlit Cloud (resolved)
 
 **Symptom:** On the live deployment the flood panel raised `ee.ee_exception.EEException` at `result["flood_only_image"].selfMask().getMapId(...)` inside `_cached_flood`. The numerical metrics from `flood_extent` (which use `reduceRegion`) succeeded; only the tile-URL generation failed. Local OAuth was unaffected; only the Streamlit Cloud service account triggered it.
 
-**Suspected cause:** missing IAM permission on the service account for the Maps API (or whichever endpoint `getMapId` calls). Root-cause investigation is separate from the defensive fix.
+**Cause:** missing IAM permission on the service account for the Maps API endpoint that `getMapId` calls.
 
-**Fix shipped:** `_cached_flood` wraps `getMapId` in `try/except`; on failure it sets `tile_url=None`, captures the exception class name in `map_error_type`, and calls `logging.exception(...)`. The flood panel renders metrics + a translatable `st.info` callout (`app.flood.map_unavailable`) instead of crashing. Once the IAM permission is granted, either bust the 6 h cache or wait for natural expiry to re-fetch the tile URL. See commit `28db4f5`.
+**Resolution:** IAM permission granted on the service account; `getMapId` now succeeds in production. The defensive `try/except` shipped in `28db4f5` stays in place as a safety net — on any future tile-generation failure the panel sets `tile_url=None`, logs the traceback via `logging.exception`, and renders an `st.info` callout (`app.flood.map_unavailable`) instead of crashing.
+
+### 6.12 folium `get_bounds()` raises `KeyError` on bare GeoJSON geometries (resolved)
+
+**Symptom:** Once the IAM fix unblocked `getMapId`, the flood panel started crashing one line later at `district_layer.get_bounds()` with `KeyError` inside `folium.utilities.iter_coords`. Local OAuth and production both affected; only surfaced after the IAM fix unmasked it.
+
+**Cause:** `ee.Geometry.getInfo()` returns a bare GeoJSON geometry (`{"type": "Polygon", "coordinates": [...]}`), not a `Feature` wrapper. folium's `iter_coords` assumes a Feature shape and dereferences `geom["geometry"]["coordinates"]`, which fails on the bare object.
+
+**Resolution:** Replaced the folium-driven bounds computation with a custom `_bounds_from_geojson(geom)` helper that walks the raw `coordinates` list directly and returns `[[min_lat, min_lon], [max_lat, max_lon]]`. Handles both bare geometries and Feature wrappers; returns `None` on malformed input, in which case the panel falls into the same `st.info` fallback branch as the prior tile-failure case. `district_layer.get_bounds()` is no longer called anywhere. See commit `6df76a7`.
 
 ## 7. Environment Details
 
