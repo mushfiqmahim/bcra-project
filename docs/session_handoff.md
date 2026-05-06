@@ -2,7 +2,7 @@
 
 **Purpose:** Brief a new engineering session on the exact current state of the project and the next concrete actions. This document is operational, not architectural; for system design see `project_spec.md`.
 
-**Last updated:** End of Phase F — salinity module shipped, panel wired, live deployment verified.
+**Last updated:** End of Phase G.1 — methodology page shipped and live; bilingual UI, exports, and polish pending.
 
 ---
 
@@ -16,7 +16,7 @@
 | D | Sentinel-1 SAR flood detection | Complete |
 | E | NDMI / drought composite | Complete |
 | F | Coastal salinity proxy | Complete |
-| G | Bilingual UI, methodology page, exports, polish | Not started |
+| G | Bilingual UI, methodology page, exports, polish | G.1 methodology page complete; bilingual UI, exports, polish pending |
 | H | YC Startup School 2026 application submission | Not started |
 
 The live application at `bcra-project-bd.streamlit.app` currently shows:
@@ -27,6 +27,7 @@ The live application at `bcra-project-bd.streamlit.app` currently shows:
 - NDMI line chart for the selected district, 24-month window (blue line, y-range [-0.5, 0.7]) with latest non-null value annotated
 - Flood extent panel — three metrics (flood-only, permanent water, flood total in km²) and a folium map with red flood pixels over the district outline, fixed to the 2024 monsoon window (May 25 – Jun 30)
 - Coastal salinity panel — two metrics (dry-season SI Mar–May, monsoon-season SI Jul–Sep) for the 2024 calendar year, gated to the 19 coastal districts; inland districts see an explanatory caption
+- Sidebar navigation to a separate Methodology page documenting formulas, data sources, interpretation, and limitations for all four indicators (rendered LaTeX, references included)
 
 ## 2. What Is Working
 
@@ -37,6 +38,7 @@ The live application at `bcra-project-bd.streamlit.app` currently shows:
 - Per-district NDMI fetch and rendering
 - Per-district flood extent fetch and folium map rendering
 - Per-district seasonal salinity (Bouaziz SI) fetch and metric rendering for coastal districts
+- Multi-page Streamlit app: indicators on the home page, methodology on a dedicated `pages/methodology.py` page (no Earth Engine compute on that page)
 - Streamlit cache (district list 24h, NDVI 1h, NDMI 1h, flood 6h, salinity 24h)
 - District switching (cached districts return instantly; uncached take 20-30s)
 
@@ -54,7 +56,8 @@ The live application at `bcra-project-bd.streamlit.app` currently shows:
 
 Files in the repo (relevant to current work):
 
-- `app.py` — Streamlit entry point with NDVI, NDMI, flood, and salinity panels wired in
+- `app.py` — Streamlit entry point with NDVI, NDMI, flood, and salinity panels wired in; `page_title` set to "BCRA — Indicators"
+- `pages/methodology.py` — pure-content methodology page (no EE compute); rendered LaTeX for all four spectral formulas, `st.warning` callout above the salinity section, references list at bottom
 - `atlas/__init__.py` — empty package marker
 - `atlas/ee_client.py` — dual-mode `init_ee()`
 - `atlas/ndvi.py` — production NDVI module with stacked-band reduction
@@ -85,7 +88,9 @@ Configuration in Streamlit Cloud (not in repo):
 ## 4. What Is Not Started
 
 - `atlas/maps.py` — folium helpers for rendering EE tile layers in Streamlit (the flood panel currently inlines the folium wiring in `app.py`; if a second map indicator joins, factor out)
-- Phase G onward (bilingual UI, methodology page, exports, polish)
+- Phase G.2 — exports (per-district CSV/PNG download buttons)
+- Phase G.3 — bilingual UI (English/Bangla string lookup via planned `atlas/i18n.py`)
+- Phase G.4 — final polish (theme, spacing, mobile layout review)
 - Phase H — YC Startup School 2026 application submission
 
 ## 5. Next Three Concrete Actions
