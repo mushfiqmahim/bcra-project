@@ -107,6 +107,10 @@
     "en": "Salinity is computed only for the 19 coastal districts. {district} is inland.",
     "bn": "লবণাক্ততা শুধুমাত্র ১৯টি উপকূলীয় জেলার জন্য গণনা করা হয়। {district} অভ্যন্তরীণ অঞ্চলে অবস্থিত।"
   },
+  "app.flood.map_unavailable": {
+    "en": "The flood map could not be loaded right now. The numerical metrics above are based on the same Earth Engine computation and are unaffected.",
+    "bn": "বন্যার মানচিত্র এই মুহূর্তে লোড করা যায়নি। উপরের সংখ্যাগত মেট্রিকগুলি একই Earth Engine গণনার উপর ভিত্তি করে এবং প্রভাবিত নয়।"
+  },
 
   "methodology.title": {
     "en": "Methodology",

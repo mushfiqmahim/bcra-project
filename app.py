@@ -1,6 +1,8 @@
 """BCRA dashboard entry point."""
 from __future__ import annotations
 
+import logging
+
 import ee
 import folium
 import pandas as pd
@@ -65,11 +67,23 @@ def _cached_salinity(district_name: str, year: int) -> dict:
 @st.cache_data(ttl=6 * 3600, show_spinner=False)
 def _cached_flood(district_name: str) -> dict:
     result = flood_extent(district_name, _FLOOD_START, _FLOOD_END)
-    map_id = result["flood_only_image"].selfMask().getMapId(
-        {"min": 0, "max": 1, "palette": ["red"]}
-    )
+
+    tile_url: str | None = None
+    map_error_type: str | None = None
+    try:
+        map_id = result["flood_only_image"].selfMask().getMapId(
+            {"min": 0, "max": 1, "palette": ["red"]}
+        )
+        tile_url = map_id["tile_fetcher"].url_format
+    except Exception as exc:
+        map_error_type = type(exc).__name__
+        logging.exception(
+            "Flood map tile generation failed for district %s", district_name
+        )
+
     return {
-        "tile_url": map_id["tile_fetcher"].url_format,
+        "tile_url": tile_url,
+        "map_error_type": map_error_type,
         "geojson": result["district_geometry"].getInfo(),
         "flood_only_area_km2": float(result["flood_only_area_km2"]),
         "permanent_water_area_km2": float(result["permanent_water_area_km2"]),
@@ -212,35 +226,38 @@ flood_cols[2].metric(
     t("app.flood.metric.flood_total"), f"{flood['flood_total_area_km2']:.1f}"
 )
 
-district_layer = folium.GeoJson(
-    flood["geojson"],
-    name=t("app.flood.layer.district_boundary"),
-    style_function=lambda feature: {
-        "color": "black",
-        "weight": 2,
-        "fillOpacity": 0,
-    },
-)
-bounds = district_layer.get_bounds()
-center = [
-    (bounds[0][0] + bounds[1][0]) / 2,
-    (bounds[0][1] + bounds[1][1]) / 2,
-]
+if flood["tile_url"] is not None:
+    district_layer = folium.GeoJson(
+        flood["geojson"],
+        name=t("app.flood.layer.district_boundary"),
+        style_function=lambda feature: {
+            "color": "black",
+            "weight": 2,
+            "fillOpacity": 0,
+        },
+    )
+    bounds = district_layer.get_bounds()
+    center = [
+        (bounds[0][0] + bounds[1][0]) / 2,
+        (bounds[0][1] + bounds[1][1]) / 2,
+    ]
 
-fmap = folium.Map(location=center, zoom_start=9, tiles="OpenStreetMap")
-folium.raster_layers.TileLayer(
-    tiles=flood["tile_url"],
-    attr="Google Earth Engine",
-    name=t("app.flood.layer.flood_extent"),
-    overlay=True,
-    control=True,
-    opacity=0.6,
-).add_to(fmap)
-district_layer.add_to(fmap)
-fmap.fit_bounds(bounds)
-folium.LayerControl().add_to(fmap)
+    fmap = folium.Map(location=center, zoom_start=9, tiles="OpenStreetMap")
+    folium.raster_layers.TileLayer(
+        tiles=flood["tile_url"],
+        attr="Google Earth Engine",
+        name=t("app.flood.layer.flood_extent"),
+        overlay=True,
+        control=True,
+        opacity=0.6,
+    ).add_to(fmap)
+    district_layer.add_to(fmap)
+    fmap.fit_bounds(bounds)
+    folium.LayerControl().add_to(fmap)
 
-st_folium(fmap, height=480, use_container_width=True, returned_objects=[])
+    st_folium(fmap, height=480, use_container_width=True, returned_objects=[])
+else:
+    st.info(t("app.flood.map_unavailable"))
 
 st.download_button(
     t("app.download_button"),
