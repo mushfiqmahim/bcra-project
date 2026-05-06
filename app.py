@@ -15,7 +15,7 @@ from atlas.ndvi import ndvi_timeseries
 from atlas.salinity import is_coastal_district, salinity_seasonal
 
 st.set_page_config(
-    page_title="BCRA — Bangladesh Climate Risk Atlas",
+    page_title="BCRA — Indicators",
     layout="wide",
 )
 
