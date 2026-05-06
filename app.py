@@ -75,6 +75,18 @@ def _bounds_from_geojson(geom: dict) -> list[list[float]] | None:
     if geom.get("type") == "Feature":
         geom = geom.get("geometry") or {}
 
+    if geom.get("type") == "GeometryCollection":
+        sub_lats: list[float] = []
+        sub_lons: list[float] = []
+        for sub in geom.get("geometries", []):
+            sub_bounds = _bounds_from_geojson(sub)
+            if sub_bounds is not None:
+                sub_lats.extend([sub_bounds[0][0], sub_bounds[1][0]])
+                sub_lons.extend([sub_bounds[0][1], sub_bounds[1][1]])
+        if not sub_lats:
+            return None
+        return [[min(sub_lats), min(sub_lons)], [max(sub_lats), max(sub_lons)]]
+
     lats: list[float] = []
     lons: list[float] = []
 
@@ -288,6 +300,22 @@ if flood["tile_url"] is not None and bounds is not None:
 
     st_folium(fmap, height=480, use_container_width=True, returned_objects=[])
 else:
+    if flood["tile_url"] is None:
+        logging.warning(
+            "Flood map fallback: tile_url is None for district %s (getMapId failed; see prior ERROR log)",
+            district,
+        )
+    else:
+        geom_type = (
+            flood["geojson"].get("type")
+            if isinstance(flood["geojson"], dict)
+            else type(flood["geojson"]).__name__
+        )
+        logging.warning(
+            "Flood map fallback: bounds=None for district %s, geojson type=%s",
+            district,
+            geom_type,
+        )
     st.info(t("app.flood.map_unavailable"))
 
 st.download_button(
