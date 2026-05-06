@@ -2,7 +2,7 @@
 
 **Purpose:** Brief a new engineering session on the exact current state of the project and the next concrete actions. This document is operational, not architectural; for system design see `project_spec.md`.
 
-**Last updated:** End of Phase G.2 — CSV exports shipped and live; bilingual UI and final polish pending.
+**Last updated:** End of Phase G.3.a — bilingual UI scaffolding shipped and live; Bangla translations and final polish pending.
 
 ---
 
@@ -16,7 +16,7 @@
 | D | Sentinel-1 SAR flood detection | Complete |
 | E | NDMI / drought composite | Complete |
 | F | Coastal salinity proxy | Complete |
-| G | Bilingual UI, methodology page, exports, polish | G.1 methodology page and G.2 CSV exports complete; bilingual UI and polish pending |
+| G | Bilingual UI, methodology page, exports, polish | G.1, G.2, and G.3.a (i18n scaffolding) complete; G.3.b (Bangla translations) and G.4 (polish) pending |
 | H | YC Startup School 2026 application submission | Not started |
 
 The live application at `bcra-project-bd.streamlit.app` currently shows:
@@ -29,6 +29,7 @@ The live application at `bcra-project-bd.streamlit.app` currently shows:
 - Coastal salinity panel — two metrics (dry-season SI Mar–May, monsoon-season SI Jul–Sep) for the 2024 calendar year, gated to the 19 coastal districts; inland districts see an explanatory caption
 - Sidebar navigation to a separate Methodology page documenting formulas, data sources, interpretation, and limitations for all four indicators (rendered LaTeX, references included)
 - "Download CSV" button below each indicator panel (NDVI, NDMI, flood, salinity); salinity button gated to coastal districts. Filenames follow `bcra_<indicator>_<slug>_<window>.csv` with apostrophes stripped and whitespace replaced by underscore.
+- Sidebar "Language / ভাষা" radio with English (default) and বাংলা options on every page; selection persists across pages via `st.session_state["language"]`. Bangla values are `null` so non-English selections currently fall back to English.
 
 ## 2. What Is Working
 
@@ -41,6 +42,7 @@ The live application at `bcra-project-bd.streamlit.app` currently shows:
 - Per-district seasonal salinity (Bouaziz SI) fetch and metric rendering for coastal districts
 - Multi-page Streamlit app: indicators on the home page, methodology on a dedicated `pages/methodology.py` page (no Earth Engine compute on that page)
 - Per-panel CSV download buttons; serialization is pure-pandas with no extra Earth Engine round-trips (the cached panel data is reused)
+- i18n scaffolding via `atlas/i18n.py` and `data/strings.json` (95 keys, dot-notation, English values populated, Bangla values null); every user-visible string in `app.py` and `pages/methodology.py` flows through `t("key")` with English fallback and key-as-breadcrumb fallback
 - Streamlit cache (district list 24h, NDVI 1h, NDMI 1h, flood 6h, salinity 24h)
 - District switching (cached districts return instantly; uncached take 20-30s)
 
@@ -51,6 +53,7 @@ The live application at `bcra-project-bd.streamlit.app` currently shows:
 - `python scripts/verify_ndmi.py` — runs `ndmi_timeseries` on Rangpur and Khulna with 12-month windows; both produce ≥9/12 non-null months with all values within the [-0.5, 0.7] sanity range.
 - `python scripts/verify_salinity.py` — runs `salinity_seasonal` for all 19 coastal districts in 2024; gating tests pass (Khulna coastal, Rangpur not, ValueError raised for non-coastal); all 19 districts resolve in FAO GAUL with both seasonal SI values inside [0, 0.3].
 - `python scripts/verify_exports.py` — pure-pandas test (no Earth Engine) for `atlas/exports.py`; covers slug rules, header column order for NDVI/NDMI, NaN/None roundtrip behavior, and single-row shapes for salinity (4 cols) and flood (6 cols).
+- `python scripts/verify_i18n.py` — standalone test (no Earth Engine, no Streamlit runtime) for `atlas/i18n.py` and `data/strings.json`; checks structural integrity of all 95 entries, non-empty English values, null-or-non-empty Bangla, smoke lookup, and missing-key fallback.
 - `streamlit run app.py` — renders the production UI locally using OAuth credentials.
 - Sentinel-1 SAR flood pipeline in `notebooks/02_flood_sandbox.ipynb` — produces correct flood extent for Sylhet 2024 (1301.5 km², 37.4% of district), confirmed against published reporting.
 - Dry-season control test in the same notebook — produces 27.9 km² (0.8% of district), confirming low false-positive rate.
@@ -68,6 +71,8 @@ Files in the repo (relevant to current work):
 - `atlas/flood.py` — production flood module (Sentinel-1 VV median composite, JRC permanent-water `updateMask`)
 - `atlas/salinity.py` — production salinity module (Bouaziz SI = √(B2 × B4) on Sentinel-2 SR Harmonized, two seasonal bands, coastal-only)
 - `atlas/exports.py` — pure-pandas CSV serializers for the four indicators plus `slugify_district` (strips apostrophes, lowercases, replaces whitespace with underscore); LF line endings forced for cross-platform consistency
+- `atlas/i18n.py` — bilingual string lookup with optional Streamlit awareness; lazy-imports streamlit only when already in `sys.modules` (silent under `python script.py`); `language_selector_sidebar()` renders the bilingual radio
+- `data/strings.json` — 95 dot-notation keys spanning the indicators page and the methodology page; English populated, Bangla null
 - `data/coastal_districts.json` — 19-district allow-list using FAO GAUL spellings (Barisal, Chittagong, Jessore — pre-2018 names)
 - `requirements.txt` — `streamlit>=1.30`, `earthengine-api>=1.0`, `pandas>=2.2`, `plotly>=5.20`, `folium>=0.20`, `streamlit-folium>=0.20`
 - `notebooks/01_ndvi_sandbox.ipynb` — NDVI sandbox with Rangpur and Khulna validation
@@ -77,6 +82,7 @@ Files in the repo (relevant to current work):
 - `scripts/verify_flood.py` — flood smoke test (Sylhet event > 1000 km², dry-season < 100 km²)
 - `scripts/verify_salinity.py` — salinity smoke test (gating + 19-district FAO GAUL resolution sweep)
 - `scripts/verify_exports.py` — exports smoke test (pure pandas, no Earth Engine)
+- `scripts/verify_i18n.py` — i18n smoke test (no Earth Engine, no Streamlit runtime required)
 - `docs/project_spec.md` — architecture document
 - `.gitignore` — excludes `*.log`, `*.html` (HTML pattern was added but may be on a concatenated line; verify)
 - `LICENSE` — MIT
@@ -93,7 +99,7 @@ Configuration in Streamlit Cloud (not in repo):
 ## 4. What Is Not Started
 
 - `atlas/maps.py` — folium helpers for rendering EE tile layers in Streamlit (the flood panel currently inlines the folium wiring in `app.py`; if a second map indicator joins, factor out)
-- Phase G.3 — bilingual UI (English/Bangla string lookup via planned `atlas/i18n.py`)
+- Phase G.3.b — populate Bangla translations for the 95 keys in `data/strings.json`
 - Phase G.4 — final polish (theme, spacing, mobile layout review)
 - Phase H — YC Startup School 2026 application submission
 
