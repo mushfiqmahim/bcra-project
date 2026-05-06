@@ -64,6 +64,38 @@ def _cached_salinity(district_name: str, year: int) -> dict:
     return salinity_seasonal(district_name, year)
 
 
+def _bounds_from_geojson(geom: dict) -> list[list[float]] | None:
+    """Compute [[min_lat, min_lon], [max_lat, max_lon]] from a GeoJSON geometry.
+
+    Handles bare geometries (Polygon, MultiPolygon) and Feature wrappers.
+    Returns None if no coordinates can be extracted.
+    """
+    if not isinstance(geom, dict):
+        return None
+    if geom.get("type") == "Feature":
+        geom = geom.get("geometry") or {}
+
+    lats: list[float] = []
+    lons: list[float] = []
+
+    def _walk(seq):
+        if not seq:
+            return
+        first = seq[0]
+        if isinstance(first, (int, float)):
+            lons.append(seq[0])
+            lats.append(seq[1])
+        else:
+            for sub in seq:
+                _walk(sub)
+
+    _walk(geom.get("coordinates", []))
+
+    if not lats or not lons:
+        return None
+    return [[min(lats), min(lons)], [max(lats), max(lons)]]
+
+
 @st.cache_data(ttl=6 * 3600, show_spinner=False)
 def _cached_flood(district_name: str) -> dict:
     result = flood_extent(district_name, _FLOOD_START, _FLOOD_END)
@@ -226,7 +258,12 @@ flood_cols[2].metric(
     t("app.flood.metric.flood_total"), f"{flood['flood_total_area_km2']:.1f}"
 )
 
-if flood["tile_url"] is not None:
+bounds = _bounds_from_geojson(flood["geojson"])
+if flood["tile_url"] is not None and bounds is not None:
+    center = [
+        (bounds[0][0] + bounds[1][0]) / 2,
+        (bounds[0][1] + bounds[1][1]) / 2,
+    ]
     district_layer = folium.GeoJson(
         flood["geojson"],
         name=t("app.flood.layer.district_boundary"),
@@ -236,12 +273,6 @@ if flood["tile_url"] is not None:
             "fillOpacity": 0,
         },
     )
-    bounds = district_layer.get_bounds()
-    center = [
-        (bounds[0][0] + bounds[1][0]) / 2,
-        (bounds[0][1] + bounds[1][1]) / 2,
-    ]
-
     fmap = folium.Map(location=center, zoom_start=9, tiles="OpenStreetMap")
     folium.raster_layers.TileLayer(
         tiles=flood["tile_url"],
