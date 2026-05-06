@@ -2,7 +2,7 @@
 
 **Purpose:** Brief a new engineering session on the exact current state of the project and the next concrete actions. This document is operational, not architectural; for system design see `project_spec.md`.
 
-**Last updated:** Post-Phase G hot-fixes complete — IAM unblocked `getMapId`, and folium's bare-GeoJSON `iter_coords` crash replaced with a custom bounds extractor; flood map renders normally in production. Defensive `try/except` and `bounds is None` fallback remain as safety nets.
+**Last updated:** Post-Phase G hot-fixes complete — IAM unblocked `getMapId`, folium's bare-GeoJSON `iter_coords` crash replaced with a custom bounds extractor (now also handling `GeometryCollection`), and the fallback `else` branch instruments which condition fired. Flood map renders normally in production; defensive paths and diagnostic logging remain as safety nets.
 
 ---
 
@@ -336,7 +336,7 @@ These are issues that have already been encountered and resolved. New work shoul
 
 **Cause:** `ee.Geometry.getInfo()` returns a bare GeoJSON geometry (`{"type": "Polygon", "coordinates": [...]}`), not a `Feature` wrapper. folium's `iter_coords` assumes a Feature shape and dereferences `geom["geometry"]["coordinates"]`, which fails on the bare object.
 
-**Resolution:** Replaced the folium-driven bounds computation with a custom `_bounds_from_geojson(geom)` helper that walks the raw `coordinates` list directly and returns `[[min_lat, min_lon], [max_lat, max_lon]]`. Handles both bare geometries and Feature wrappers; returns `None` on malformed input, in which case the panel falls into the same `st.info` fallback branch as the prior tile-failure case. `district_layer.get_bounds()` is no longer called anywhere. See commit `6df76a7`.
+**Resolution:** Replaced the folium-driven bounds computation with a custom `_bounds_from_geojson(geom)` helper that walks the raw `coordinates` list directly and returns `[[min_lat, min_lon], [max_lat, max_lon]]`. Handles bare geometries, `Feature` wrappers, and `GeometryCollection` (recursive merge of sub-geometry bounds); returns `None` on malformed input, in which case the panel falls into the same `st.info` fallback branch as the prior tile-failure case. `district_layer.get_bounds()` is no longer called anywhere. The fallback `else` branch logs which condition fired (`tile_url is None` vs `bounds=None`, with the actual geojson `type`) so future regressions are diagnosable without code changes. See commits `6df76a7` and `1e99a6a`.
 
 ## 7. Environment Details
 
