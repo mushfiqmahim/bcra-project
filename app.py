@@ -140,6 +140,8 @@ st.download_button(
     key="download_ndvi_csv",
 )
 
+st.divider()
+
 ndmi_end_date = pd.Timestamp.today().normalize().strftime("%Y-%m-%d")
 with st.spinner(t("app.ndmi.spinner").format(district=district)):
     ndmi_df = _cached_ndmi(district, 24, ndmi_end_date)
@@ -191,6 +193,8 @@ st.download_button(
     mime="text/csv",
     key="download_ndmi_csv",
 )
+
+st.divider()
 
 st.subheader(t("app.flood.heading"))
 
@@ -257,6 +261,8 @@ st.download_button(
     mime="text/csv",
     key="download_flood_csv",
 )
+
+st.divider()
 
 st.subheader(t("app.salinity.heading").format(year=_SALINITY_YEAR))
 
