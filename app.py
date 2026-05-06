@@ -9,6 +9,13 @@ import streamlit as st
 from streamlit_folium import st_folium
 
 from atlas.ee_client import init_ee
+from atlas.exports import (
+    flood_to_csv,
+    ndmi_to_csv,
+    ndvi_to_csv,
+    salinity_to_csv,
+    slugify_district,
+)
 from atlas.flood import flood_extent
 from atlas.moisture import ndmi_timeseries
 from atlas.ndvi import ndvi_timeseries
@@ -118,6 +125,17 @@ fig.update_layout(
 )
 st.plotly_chart(fig, use_container_width=True)
 
+st.download_button(
+    "Download CSV",
+    data=ndvi_to_csv(df, district),
+    file_name=(
+        f"bcra_ndvi_{slugify_district(district)}_24m_"
+        f"{pd.Timestamp.today().normalize():%Y-%m-%d}.csv"
+    ),
+    mime="text/csv",
+    key="download_ndvi_csv",
+)
+
 ndmi_end_date = pd.Timestamp.today().normalize().strftime("%Y-%m-%d")
 with st.spinner(f"Computing NDMI for {district}…"):
     ndmi_df = _cached_ndmi(district, 24, ndmi_end_date)
@@ -161,6 +179,14 @@ ndmi_fig.update_layout(
     margin=dict(l=60, r=30, t=60, b=50),
 )
 st.plotly_chart(ndmi_fig, use_container_width=True)
+
+st.download_button(
+    "Download CSV",
+    data=ndmi_to_csv(ndmi_df, district),
+    file_name=f"bcra_ndmi_{slugify_district(district)}_24m_{ndmi_end_date}.csv",
+    mime="text/csv",
+    key="download_ndmi_csv",
+)
 
 st.subheader("Flood extent — 2024 monsoon (May 25 – Jun 30)")
 
@@ -208,6 +234,26 @@ folium.LayerControl().add_to(fmap)
 
 st_folium(fmap, height=480, use_container_width=True, returned_objects=[])
 
+st.download_button(
+    "Download CSV",
+    data=flood_to_csv(
+        {
+            "flood_only_area_km2": flood["flood_only_area_km2"],
+            "permanent_water_area_km2": flood["permanent_water_area_km2"],
+            "flood_total_area_km2": flood["flood_total_area_km2"],
+        },
+        district,
+        _FLOOD_START,
+        _FLOOD_END,
+    ),
+    file_name=(
+        f"bcra_flood_{slugify_district(district)}_"
+        f"{_FLOOD_START}_to_{_FLOOD_END}.csv"
+    ),
+    mime="text/csv",
+    key="download_flood_csv",
+)
+
 st.subheader(f"Coastal salinity (Bouaziz SI, {_SALINITY_YEAR})")
 
 if is_coastal_district(district):
@@ -224,6 +270,15 @@ if is_coastal_district(district):
     salinity_cols[1].metric(
         "Monsoon season (Jul–Sep)",
         f"{monsoon:.3f}" if monsoon is not None else "N/A",
+    )
+    st.download_button(
+        "Download CSV",
+        data=salinity_to_csv(salinity, district),
+        file_name=(
+            f"bcra_salinity_{slugify_district(district)}_{_SALINITY_YEAR}.csv"
+        ),
+        mime="text/csv",
+        key="download_salinity_csv",
     )
 else:
     st.caption(
