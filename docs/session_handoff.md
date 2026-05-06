@@ -2,7 +2,7 @@
 
 **Purpose:** Brief a new engineering session on the exact current state of the project and the next concrete actions. This document is operational, not architectural; for system design see `project_spec.md`.
 
-**Last updated:** Post-Phase G hot-fixes complete — IAM unblocked `getMapId`, folium's bare-GeoJSON `iter_coords` crash replaced with a custom bounds extractor (now also handling `GeometryCollection`), and the fallback `else` branch instruments which condition fired. Flood map renders normally in production; defensive paths and diagnostic logging remain as safety nets.
+**Last updated:** Post-Phase G hot-fixes complete — IAM unblocked `getMapId`; the actual `GeometryCollection` root cause is now normalized at the source (flattened to `MultiPolygon` inside `_cached_flood`), so folium never sees the offending shape. Bounds extractor, fallback logging, and `st.info` fallback all remain as defense-in-depth.
 
 ---
 
@@ -336,7 +336,15 @@ These are issues that have already been encountered and resolved. New work shoul
 
 **Cause:** `ee.Geometry.getInfo()` returns a bare GeoJSON geometry (`{"type": "Polygon", "coordinates": [...]}`), not a `Feature` wrapper. folium's `iter_coords` assumes a Feature shape and dereferences `geom["geometry"]["coordinates"]`, which fails on the bare object.
 
-**Resolution:** Replaced the folium-driven bounds computation with a custom `_bounds_from_geojson(geom)` helper that walks the raw `coordinates` list directly and returns `[[min_lat, min_lon], [max_lat, max_lon]]`. Handles bare geometries, `Feature` wrappers, and `GeometryCollection` (recursive merge of sub-geometry bounds); returns `None` on malformed input, in which case the panel falls into the same `st.info` fallback branch as the prior tile-failure case. `district_layer.get_bounds()` is no longer called anywhere. The fallback `else` branch logs which condition fired (`tile_url is None` vs `bounds=None`, with the actual geojson `type`) so future regressions are diagnosable without code changes. See commits `6df76a7` and `1e99a6a`.
+**Resolution:** Replaced the folium-driven bounds computation with a custom `_bounds_from_geojson(geom)` helper that walks the raw `coordinates` list directly and returns `[[min_lat, min_lon], [max_lat, max_lon]]`. Handles bare geometries, `Feature` wrappers, and `GeometryCollection` (recursive merge of sub-geometry bounds); returns `None` on malformed input, in which case the panel falls into the same `st.info` fallback branch as the prior tile-failure case. `district_layer.get_bounds()` is no longer called anywhere. The fallback `else` branch logs which condition fired (`tile_url is None` vs `bounds=None`, with the actual geojson `type`) so future regressions are diagnosable without code changes. See commits `6df76a7` and `1e99a6a`. (Now backstopped by 6.13's source-side normalization, which means the `GeometryCollection` branch should never fire in practice.)
+
+### 6.13 EE returns `GeometryCollection` for districts with complex coastlines (resolved)
+
+**Symptom:** Even after the bounds-extractor fix in 6.12, Khulna still crashed inside `st_folium`'s internal `folium_map.get_bounds()` with `KeyError` from `convert_to_feature_collection` → `iter_coords`. The crash was unreachable from the consumer side — folium itself called `get_bounds()` after the style_function wrapped the geometry in a Feature.
+
+**Cause:** `ee.Geometry.getInfo()` returns `GeometryCollection` (not `Polygon` or `MultiPolygon`) for districts whose ADM2 polygon contains multiple disjoint pieces (Khulna's mainland plus its Sundarbans island fragments). `GeometryCollection` stores members under `geometries`, not `coordinates`. Folium's `iter_coords` only knows how to traverse the `coordinates` key.
+
+**Resolution:** Normalize the geometry at the source. `_cached_flood` now passes the `getInfo()` result through a `_flatten_to_multipolygon(geom)` helper before storing in the cache. The helper short-circuits if the input is already `Polygon` or `MultiPolygon`; for `GeometryCollection` it merges all child `Polygon`/`MultiPolygon` rings into a single `MultiPolygon`. Folium never sees the offending shape. The bounds extractor, fallback logging, and `st.info` fallback from 6.12 all remain as defense-in-depth — they should not fire in practice for any current district. See commit `77bccf4`.
 
 ## 7. Environment Details
 
