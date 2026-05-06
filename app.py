@@ -17,6 +17,7 @@ from atlas.exports import (
     slugify_district,
 )
 from atlas.flood import flood_extent
+from atlas.i18n import language_selector_sidebar, t
 from atlas.moisture import ndmi_timeseries
 from atlas.ndvi import ndvi_timeseries
 from atlas.salinity import is_coastal_district, salinity_seasonal
@@ -25,6 +26,8 @@ st.set_page_config(
     page_title="BCRA — Indicators",
     layout="wide",
 )
+
+language_selector_sidebar()
 
 init_ee()
 
@@ -73,16 +76,16 @@ def _cached_flood(district_name: str) -> dict:
     }
 
 
-st.title("Bangladesh Climate Risk Atlas")
-st.caption("Sentinel-2 NDVI monthly time series at the district level.")
+st.title(t("app.title"))
+st.caption(t("app.caption"))
 
-with st.spinner("Loading districts…"):
+with st.spinner(t("app.spinner.loading_districts")):
     districts = _load_district_names()
 
 default_idx = districts.index("Khulna") if "Khulna" in districts else 0
-district = st.selectbox("District", districts, index=default_idx)
+district = st.selectbox(t("app.district_selector.label"), districts, index=default_idx)
 
-with st.spinner(f"Computing NDVI for {district}…"):
+with st.spinner(t("app.ndvi.spinner").format(district=district)):
     df = _cached_ndvi(district, 24)
 
 latest = df.dropna(subset=["ndvi"]).tail(1)
@@ -115,9 +118,9 @@ if not latest.empty:
     )
 
 fig.update_layout(
-    title=f"{district} — Monthly Mean NDVI (Sentinel-2, 24 months)",
-    xaxis_title="Month",
-    yaxis_title="NDVI",
+    title=t("app.ndvi.chart_title").format(district=district),
+    xaxis_title=t("app.ndvi.xaxis_title"),
+    yaxis_title=t("app.ndvi.yaxis_title"),
     yaxis=dict(range=[0, 1]),
     template="simple_white",
     height=440,
@@ -126,7 +129,7 @@ fig.update_layout(
 st.plotly_chart(fig, use_container_width=True)
 
 st.download_button(
-    "Download CSV",
+    t("app.download_button"),
     data=ndvi_to_csv(df, district),
     file_name=(
         f"bcra_ndvi_{slugify_district(district)}_24m_"
@@ -137,7 +140,7 @@ st.download_button(
 )
 
 ndmi_end_date = pd.Timestamp.today().normalize().strftime("%Y-%m-%d")
-with st.spinner(f"Computing NDMI for {district}…"):
+with st.spinner(t("app.ndmi.spinner").format(district=district)):
     ndmi_df = _cached_ndmi(district, 24, ndmi_end_date)
 
 ndmi_latest = ndmi_df.dropna(subset=["ndmi"]).tail(1)
@@ -170,9 +173,9 @@ if not ndmi_latest.empty:
     )
 
 ndmi_fig.update_layout(
-    title=f"{district} — Monthly Mean NDMI (Sentinel-2, 24 months)",
-    xaxis_title="Month",
-    yaxis_title="NDMI",
+    title=t("app.ndmi.chart_title").format(district=district),
+    xaxis_title=t("app.ndmi.xaxis_title"),
+    yaxis_title=t("app.ndmi.yaxis_title"),
     yaxis=dict(range=[-0.5, 0.7]),
     template="simple_white",
     height=440,
@@ -181,32 +184,32 @@ ndmi_fig.update_layout(
 st.plotly_chart(ndmi_fig, use_container_width=True)
 
 st.download_button(
-    "Download CSV",
+    t("app.download_button"),
     data=ndmi_to_csv(ndmi_df, district),
     file_name=f"bcra_ndmi_{slugify_district(district)}_24m_{ndmi_end_date}.csv",
     mime="text/csv",
     key="download_ndmi_csv",
 )
 
-st.subheader("Flood extent — 2024 monsoon (May 25 – Jun 30)")
+st.subheader(t("app.flood.heading"))
 
-with st.spinner(f"Computing flood extent for {district}…"):
+with st.spinner(t("app.flood.spinner").format(district=district)):
     flood = _cached_flood(district)
 
 flood_cols = st.columns(3)
 flood_cols[0].metric(
-    "Flood-only extent (km²)", f"{flood['flood_only_area_km2']:.1f}"
+    t("app.flood.metric.flood_only"), f"{flood['flood_only_area_km2']:.1f}"
 )
 flood_cols[1].metric(
-    "Permanent water (km²)", f"{flood['permanent_water_area_km2']:.1f}"
+    t("app.flood.metric.permanent_water"), f"{flood['permanent_water_area_km2']:.1f}"
 )
 flood_cols[2].metric(
-    "Flood total (km²)", f"{flood['flood_total_area_km2']:.1f}"
+    t("app.flood.metric.flood_total"), f"{flood['flood_total_area_km2']:.1f}"
 )
 
 district_layer = folium.GeoJson(
     flood["geojson"],
-    name="District boundary",
+    name=t("app.flood.layer.district_boundary"),
     style_function=lambda feature: {
         "color": "black",
         "weight": 2,
@@ -223,7 +226,7 @@ fmap = folium.Map(location=center, zoom_start=9, tiles="OpenStreetMap")
 folium.raster_layers.TileLayer(
     tiles=flood["tile_url"],
     attr="Google Earth Engine",
-    name="Flood extent (May 25 – Jun 30, 2024)",
+    name=t("app.flood.layer.flood_extent"),
     overlay=True,
     control=True,
     opacity=0.6,
@@ -235,7 +238,7 @@ folium.LayerControl().add_to(fmap)
 st_folium(fmap, height=480, use_container_width=True, returned_objects=[])
 
 st.download_button(
-    "Download CSV",
+    t("app.download_button"),
     data=flood_to_csv(
         {
             "flood_only_area_km2": flood["flood_only_area_km2"],
@@ -254,25 +257,25 @@ st.download_button(
     key="download_flood_csv",
 )
 
-st.subheader(f"Coastal salinity (Bouaziz SI, {_SALINITY_YEAR})")
+st.subheader(t("app.salinity.heading").format(year=_SALINITY_YEAR))
 
 if is_coastal_district(district):
-    with st.spinner(f"Computing salinity for {district}…"):
+    with st.spinner(t("app.salinity.spinner").format(district=district)):
         salinity = _cached_salinity(district, _SALINITY_YEAR)
 
     salinity_cols = st.columns(2)
     dry = salinity["dry_season_si"]
     monsoon = salinity["monsoon_season_si"]
     salinity_cols[0].metric(
-        "Dry season (Mar–May)",
-        f"{dry:.3f}" if dry is not None else "N/A",
+        t("app.salinity.metric.dry_season"),
+        f"{dry:.3f}" if dry is not None else t("app.salinity.metric.na"),
     )
     salinity_cols[1].metric(
-        "Monsoon season (Jul–Sep)",
-        f"{monsoon:.3f}" if monsoon is not None else "N/A",
+        t("app.salinity.metric.monsoon_season"),
+        f"{monsoon:.3f}" if monsoon is not None else t("app.salinity.metric.na"),
     )
     st.download_button(
-        "Download CSV",
+        t("app.download_button"),
         data=salinity_to_csv(salinity, district),
         file_name=(
             f"bcra_salinity_{slugify_district(district)}_{_SALINITY_YEAR}.csv"
@@ -282,7 +285,6 @@ if is_coastal_district(district):
     )
 else:
     st.caption(
-        f"Salinity is computed only for the 19 coastal districts. "
-        f"{district} is inland."
+        t("app.salinity.inland_caption").format(district=district)
     )
 
