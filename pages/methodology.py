@@ -1,11 +1,12 @@
 """BCRA methodology page: formulas, data sources, interpretation, limitations."""
 import streamlit as st
 
-from atlas.i18n import language_selector_sidebar, t
+from atlas.i18n import t
+from atlas.ui import app_footer, sidebar_chrome
 
 st.set_page_config(page_title="BCRA — Methodology", layout="wide")
 
-language_selector_sidebar()
+sidebar_chrome()
 
 st.title(t("methodology.title"))
 
@@ -212,3 +213,5 @@ st.markdown(
     "- FAO/GAUL/2015 administrative boundaries, level 2 — Food and "
     "Agriculture Organization of the United Nations."
 )
+
+app_footer()

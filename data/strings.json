@@ -390,5 +390,18 @@
   "methodology.references.heading": {
     "en": "References",
     "bn": "তথ্যসূত্র"
+  },
+
+  "sidebar.project_tagline": {
+    "en": "Free public dashboard tracking climate-risk indicators across Bangladesh districts.",
+    "bn": "বাংলাদেশের জেলাগুলিতে জলবায়ু ঝুঁকি সূচক ট্র্যাক করার বিনামূল্যের সর্বজনীন ড্যাশবোর্ড।"
+  },
+  "common.github_link_text": {
+    "en": "Source on GitHub",
+    "bn": "GitHub-এ সোর্স কোড"
+  },
+  "footer.methodology_link_text": {
+    "en": "Methodology and limitations",
+    "bn": "পদ্ধতি ও সীমাবদ্ধতা"
   }
 }

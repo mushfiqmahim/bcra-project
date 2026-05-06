@@ -17,17 +17,18 @@ from atlas.exports import (
     slugify_district,
 )
 from atlas.flood import flood_extent
-from atlas.i18n import language_selector_sidebar, t
+from atlas.i18n import t
 from atlas.moisture import ndmi_timeseries
 from atlas.ndvi import ndvi_timeseries
 from atlas.salinity import is_coastal_district, salinity_seasonal
+from atlas.ui import app_footer, sidebar_chrome
 
 st.set_page_config(
     page_title="BCRA — Indicators",
     layout="wide",
 )
 
-language_selector_sidebar()
+sidebar_chrome()
 
 init_ee()
 
@@ -287,4 +288,6 @@ else:
     st.caption(
         t("app.salinity.inland_caption").format(district=district)
     )
+
+app_footer()
 
