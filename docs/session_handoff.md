@@ -2,7 +2,7 @@
 
 **Purpose:** Brief a new engineering session on the exact current state of the project and the next concrete actions. This document is operational, not architectural; for system design see `project_spec.md`.
 
-**Last updated:** End of Phase G.3.b — Bangla translations populated and live; final polish (G.4) pending.
+**Last updated:** End of Phase G.4.a — theme, sidebar chrome, and footer shipped and live; remaining G.4 polish (spacing, mobile review) pending.
 
 ---
 
@@ -16,7 +16,7 @@
 | D | Sentinel-1 SAR flood detection | Complete |
 | E | NDMI / drought composite | Complete |
 | F | Coastal salinity proxy | Complete |
-| G | Bilingual UI, methodology page, exports, polish | G.1, G.2, G.3.a, and G.3.b (Bangla populated) complete; G.4 (polish) pending |
+| G | Bilingual UI, methodology page, exports, polish | G.1, G.2, G.3.a, G.3.b, and G.4.a (theme/chrome/footer) complete; remaining G.4 polish pending |
 | H | YC Startup School 2026 application submission | Not started |
 
 The live application at `bcra-project-bd.streamlit.app` currently shows:
@@ -29,7 +29,8 @@ The live application at `bcra-project-bd.streamlit.app` currently shows:
 - Coastal salinity panel — two metrics (dry-season SI Mar–May, monsoon-season SI Jul–Sep) for the 2024 calendar year, gated to the 19 coastal districts; inland districts see an explanatory caption
 - Sidebar navigation to a separate Methodology page documenting formulas, data sources, interpretation, and limitations for all four indicators (rendered LaTeX, references included)
 - "Download CSV" button below each indicator panel (NDVI, NDMI, flood, salinity); salinity button gated to coastal districts. Filenames follow `bcra_<indicator>_<slug>_<window>.csv` with apostrophes stripped and whitespace replaced by underscore.
-- Sidebar "Language / ভাষা" radio with English (default) and বাংলা options on every page; selection persists across pages via `st.session_state["language"]`. All 95 keys have populated Bangla values; technical acronyms (NDVI, NDMI, SAR, B-band identifiers, dataset IDs) and citations stay verbatim per academic-Bangla convention.
+- Sidebar "Language / ভাষা" radio with English (default) and বাংলা options on every page; selection persists across pages via `st.session_state["language"]`. All 98 keys have populated Bangla values; technical acronyms (NDVI, NDMI, SAR, B-band identifiers, dataset IDs) and citations stay verbatim per academic-Bangla convention.
+- Earth-green Streamlit theme via `.streamlit/config.toml` (primaryColor `#3D6B47`); shared sidebar chrome (project name + tagline + language radio + GitHub link) and three-piece page footer (project name · GitHub · Methodology) rendered consistently on both pages.
 
 ## 2. What Is Working
 
@@ -42,7 +43,8 @@ The live application at `bcra-project-bd.streamlit.app` currently shows:
 - Per-district seasonal salinity (Bouaziz SI) fetch and metric rendering for coastal districts
 - Multi-page Streamlit app: indicators on the home page, methodology on a dedicated `pages/methodology.py` page (no Earth Engine compute on that page)
 - Per-panel CSV download buttons; serialization is pure-pandas with no extra Earth Engine round-trips (the cached panel data is reused)
-- i18n via `atlas/i18n.py` and `data/strings.json` (95 keys, dot-notation, both English and Bangla populated); every user-visible string in `app.py` and `pages/methodology.py` flows through `t("key")` with English fallback and key-as-breadcrumb fallback
+- i18n via `atlas/i18n.py` and `data/strings.json` (98 keys, dot-notation, both English and Bangla populated); every user-visible string in `app.py` and `pages/methodology.py` flows through `t("key")` with English fallback and key-as-breadcrumb fallback
+- Shared UI chrome via `atlas/ui.py` (`sidebar_chrome()` and `app_footer()`); both pages call the same helpers so the sidebar and footer stay in sync
 - Streamlit cache (district list 24h, NDVI 1h, NDMI 1h, flood 6h, salinity 24h)
 - District switching (cached districts return instantly; uncached take 20-30s)
 
@@ -72,7 +74,9 @@ Files in the repo (relevant to current work):
 - `atlas/salinity.py` — production salinity module (Bouaziz SI = √(B2 × B4) on Sentinel-2 SR Harmonized, two seasonal bands, coastal-only)
 - `atlas/exports.py` — pure-pandas CSV serializers for the four indicators plus `slugify_district` (strips apostrophes, lowercases, replaces whitespace with underscore); LF line endings forced for cross-platform consistency
 - `atlas/i18n.py` — bilingual string lookup with optional Streamlit awareness; lazy-imports streamlit only when already in `sys.modules` (silent under `python script.py`); `language_selector_sidebar()` renders the bilingual radio
-- `data/strings.json` — 95 dot-notation keys spanning the indicators page and the methodology page; both English and Bangla populated
+- `atlas/ui.py` — shared `sidebar_chrome()` and `app_footer()`; lazy streamlit imports; `GITHUB_URL` constant
+- `data/strings.json` — 98 dot-notation keys spanning the indicators page, the methodology page, and shared chrome; both English and Bangla populated
+- `.streamlit/config.toml` — `[theme]` block (earth-green primary, warm off-white background, sans-serif font); secrets file remains untracked via `.gitignore`
 - `data/coastal_districts.json` — 19-district allow-list using FAO GAUL spellings (Barisal, Chittagong, Jessore — pre-2018 names)
 - `requirements.txt` — `streamlit>=1.30`, `earthengine-api>=1.0`, `pandas>=2.2`, `plotly>=5.20`, `folium>=0.20`, `streamlit-folium>=0.20`
 - `notebooks/01_ndvi_sandbox.ipynb` — NDVI sandbox with Rangpur and Khulna validation
@@ -99,7 +103,7 @@ Configuration in Streamlit Cloud (not in repo):
 ## 4. What Is Not Started
 
 - `atlas/maps.py` — folium helpers for rendering EE tile layers in Streamlit (the flood panel currently inlines the folium wiring in `app.py`; if a second map indicator joins, factor out)
-- Phase G.4 — final polish (theme, spacing, mobile layout review)
+- Phase G.4.b onward — remaining polish (spacing pass on dense panels, mobile/narrow-viewport review, optional Streamlit `runtime.txt` revisit)
 - Phase H — YC Startup School 2026 application submission
 
 ## 5. Next Three Concrete Actions
