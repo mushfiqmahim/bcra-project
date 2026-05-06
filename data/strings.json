@@ -1,394 +1,394 @@
 {
   "app.title": {
     "en": "Bangladesh Climate Risk Atlas",
-    "bn": null
+    "bn": "বাংলাদেশ জলবায়ু ঝুঁকি অ্যাটলাস"
   },
   "app.caption": {
     "en": "Sentinel-2 NDVI monthly time series at the district level.",
-    "bn": null
+    "bn": "জেলা পর্যায়ে Sentinel-2 NDVI-এর মাসিক টাইম সিরিজ।"
   },
   "app.spinner.loading_districts": {
     "en": "Loading districts…",
-    "bn": null
+    "bn": "জেলাগুলি লোড করা হচ্ছে…"
   },
   "app.district_selector.label": {
     "en": "District",
-    "bn": null
+    "bn": "জেলা"
   },
   "app.download_button": {
     "en": "Download CSV",
-    "bn": null
+    "bn": "CSV ডাউনলোড করুন"
   },
 
   "app.ndvi.spinner": {
     "en": "Computing NDVI for {district}…",
-    "bn": null
+    "bn": "{district}-এর জন্য NDVI গণনা করা হচ্ছে…"
   },
   "app.ndvi.chart_title": {
     "en": "{district} — Monthly Mean NDVI (Sentinel-2, 24 months)",
-    "bn": null
+    "bn": "{district} — মাসিক গড় NDVI (Sentinel-2, ২৪ মাস)"
   },
   "app.ndvi.xaxis_title": {
     "en": "Month",
-    "bn": null
+    "bn": "মাস"
   },
   "app.ndvi.yaxis_title": {
     "en": "NDVI",
-    "bn": null
+    "bn": "NDVI"
   },
 
   "app.ndmi.spinner": {
     "en": "Computing NDMI for {district}…",
-    "bn": null
+    "bn": "{district}-এর জন্য NDMI গণনা করা হচ্ছে…"
   },
   "app.ndmi.chart_title": {
     "en": "{district} — Monthly Mean NDMI (Sentinel-2, 24 months)",
-    "bn": null
+    "bn": "{district} — মাসিক গড় NDMI (Sentinel-2, ২৪ মাস)"
   },
   "app.ndmi.xaxis_title": {
     "en": "Month",
-    "bn": null
+    "bn": "মাস"
   },
   "app.ndmi.yaxis_title": {
     "en": "NDMI",
-    "bn": null
+    "bn": "NDMI"
   },
 
   "app.flood.heading": {
     "en": "Flood extent — 2024 monsoon (May 25 – Jun 30)",
-    "bn": null
+    "bn": "বন্যার বিস্তৃতি — ২০২৪ বর্ষা (২৫ মে – ৩০ জুন)"
   },
   "app.flood.spinner": {
     "en": "Computing flood extent for {district}…",
-    "bn": null
+    "bn": "{district}-এর বন্যার বিস্তৃতি গণনা করা হচ্ছে…"
   },
   "app.flood.metric.flood_only": {
     "en": "Flood-only extent (km²)",
-    "bn": null
+    "bn": "শুধুমাত্র বন্যার বিস্তৃতি (কিমি²)"
   },
   "app.flood.metric.permanent_water": {
     "en": "Permanent water (km²)",
-    "bn": null
+    "bn": "স্থায়ী জলরাশি (কিমি²)"
   },
   "app.flood.metric.flood_total": {
     "en": "Flood total (km²)",
-    "bn": null
+    "bn": "মোট বন্যা (কিমি²)"
   },
   "app.flood.layer.district_boundary": {
     "en": "District boundary",
-    "bn": null
+    "bn": "জেলার সীমানা"
   },
   "app.flood.layer.flood_extent": {
     "en": "Flood extent (May 25 – Jun 30, 2024)",
-    "bn": null
+    "bn": "বন্যার বিস্তৃতি (২৫ মে – ৩০ জুন, ২০২৪)"
   },
 
   "app.salinity.heading": {
     "en": "Coastal salinity (Bouaziz SI, {year})",
-    "bn": null
+    "bn": "উপকূলীয় লবণাক্ততা (Bouaziz SI, {year})"
   },
   "app.salinity.spinner": {
     "en": "Computing salinity for {district}…",
-    "bn": null
+    "bn": "{district}-এর লবণাক্ততা গণনা করা হচ্ছে…"
   },
   "app.salinity.metric.dry_season": {
     "en": "Dry season (Mar–May)",
-    "bn": null
+    "bn": "শুষ্ক মৌসুম (মার্চ–মে)"
   },
   "app.salinity.metric.monsoon_season": {
     "en": "Monsoon season (Jul–Sep)",
-    "bn": null
+    "bn": "বর্ষা মৌসুম (জুলাই–সেপ্টেম্বর)"
   },
   "app.salinity.metric.na": {
     "en": "N/A",
-    "bn": null
+    "bn": "প্রযোজ্য নয়"
   },
   "app.salinity.inland_caption": {
     "en": "Salinity is computed only for the 19 coastal districts. {district} is inland.",
-    "bn": null
+    "bn": "লবণাক্ততা শুধুমাত্র ১৯টি উপকূলীয় জেলার জন্য গণনা করা হয়। {district} অভ্যন্তরীণ অঞ্চলে অবস্থিত।"
   },
 
   "methodology.title": {
     "en": "Methodology",
-    "bn": null
+    "bn": "পদ্ধতি"
   },
   "methodology.overview.paragraph_1": {
     "en": "The Bangladesh Climate Risk Atlas (BCRA) is a free, public dashboard that exposes satellite-derived climate-risk indicators for every district of Bangladesh. All indicators are computed on Google Earth Engine and reduced to the administrative-district level (ADM2) defined by FAO GAUL 2015.",
-    "bn": null
+    "bn": "বাংলাদেশ জলবায়ু ঝুঁকি অ্যাটলাস (BCRA) একটি বিনামূল্যের, সর্বজনীন ড্যাশবোর্ড যা বাংলাদেশের প্রতিটি জেলার জন্য স্যাটেলাইট-ভিত্তিক জলবায়ু ঝুঁকি সূচক প্রদর্শন করে। সমস্ত সূচক Google Earth Engine-এ গণনা করা হয় এবং FAO GAUL 2015-এ সংজ্ঞায়িত প্রশাসনিক-জেলা পর্যায়ে (ADM2) সংক্ষিপ্ত করা হয়।"
   },
   "methodology.overview.paragraph_2": {
     "en": "This page documents the formulas, data sources, interpretation, and limitations for the four indicators currently shipped: NDVI, NDMI, flood extent, and the Bouaziz salinity proxy. The salinity indicator is a remote-sensing proxy, not a calibrated soil-salinity measurement; the limitations sections should be read as carefully as the formulas.",
-    "bn": null
+    "bn": "এই পৃষ্ঠায় বর্তমানে চালু চারটি সূচকের জন্য সূত্র, ডেটা সোর্স, ব্যাখ্যা ও সীমাবদ্ধতা নথিভুক্ত করা হয়েছে: NDVI, NDMI, বন্যার বিস্তৃতি ও Bouaziz লবণাক্ততা প্রক্সি। লবণাক্ততা সূচকটি একটি রিমোট-সেন্সিং প্রক্সি, ক্যালিব্রেট করা মাটির লবণাক্ততা পরিমাপ নয়; সীমাবদ্ধতার অংশগুলি সূত্রের মতোই সাবধানে পড়া উচিত।"
   },
 
   "methodology.subheader.description": {
     "en": "Description",
-    "bn": null
+    "bn": "বিবরণ"
   },
   "methodology.subheader.formula": {
     "en": "Formula",
-    "bn": null
+    "bn": "সূত্র"
   },
   "methodology.subheader.data_sources": {
     "en": "Data Sources",
-    "bn": null
+    "bn": "ডেটা সোর্স"
   },
   "methodology.subheader.interpretation": {
     "en": "Interpretation",
-    "bn": null
+    "bn": "ব্যাখ্যা"
   },
   "methodology.subheader.limitations": {
     "en": "Limitations",
-    "bn": null
+    "bn": "সীমাবদ্ধতা"
   },
 
   "methodology.ndvi.heading": {
     "en": "1. Vegetation Health (NDVI)",
-    "bn": null
+    "bn": "১. উদ্ভিদের স্বাস্থ্য (NDVI)"
   },
   "methodology.ndvi.description": {
     "en": "NDVI captures photosynthetic vegetation cover. In Bangladesh, NDVI tracks the rice agricultural calendar with two pronounced peaks — Aman rice in September–October and Boro rice in March–May — separated by post-harvest troughs.",
-    "bn": null
+    "bn": "NDVI সালোকসংশ্লেষী উদ্ভিদ আচ্ছাদন পরিমাপ করে। বাংলাদেশে, NDVI ধানের কৃষি-পঞ্জিকা অনুসরণ করে দুটি স্পষ্ট শীর্ষ দেখায় — সেপ্টেম্বর–অক্টোবরে আমন ধান এবং মার্চ–মে'তে বোরো ধান — যা ফসল কাটার পরের ঘাটতি দ্বারা পৃথক হয়।"
   },
   "methodology.ndvi.formula_caption": {
     "en": "where $B_{8}$ is Sentinel-2 NIR (842 nm) and $B_{4}$ is Sentinel-2 Red (665 nm), both in surface reflectance units.",
-    "bn": null
+    "bn": "যেখানে $B_{8}$ হল Sentinel-2 NIR (৮৪২ nm) এবং $B_{4}$ হল Sentinel-2 Red (৬৬৫ nm), উভয়ই সারফেস রিফ্লেকটেন্স এককে।"
   },
   "methodology.ndvi.data_sources.bullet_1": {
     "en": "Sentinel-2 Level-2A from `COPERNICUS/S2_SR_HARMONIZED`, filtered to the district polygon and to scenes with `CLOUDY_PIXEL_PERCENTAGE < 60`.",
-    "bn": null
+    "bn": "`COPERNICUS/S2_SR_HARMONIZED` থেকে Sentinel-2 Level-2A, জেলার পলিগনে এবং `CLOUDY_PIXEL_PERCENTAGE < 60` থাকা দৃশ্যে ফিল্টার করা।"
   },
   "methodology.ndvi.data_sources.bullet_2": {
     "en": "Cloud and cirrus masking via QA60 bits 10 and 11.",
-    "bn": null
+    "bn": "QA60 বিট ১০ ও ১১-এর মাধ্যমে মেঘ ও সিরাস মাস্কিং।"
   },
   "methodology.ndvi.data_sources.bullet_3": {
     "en": "Monthly composites built across a 24-month rolling window, reduced at 100 m scale, district-level mean.",
-    "bn": null
+    "bn": "২৪-মাসের রোলিং উইন্ডো জুড়ে তৈরি মাসিক কম্পোজিট, ১০০ মি স্কেলে রিডাকশন করা, জেলা পর্যায়ের গড়।"
   },
   "methodology.ndvi.interpretation": {
     "en": "Higher NDVI indicates more vigorous green cover. Values typically range from 0.2 (bare soil, post-harvest) to 0.7 (peak canopy). The bimodal peaks align with the two rice cycles; the timing and amplitude carry information about cropping intensity and growing-season conditions.",
-    "bn": null
+    "bn": "উচ্চতর NDVI আরও সবুজ আচ্ছাদন নির্দেশ করে। মান সাধারণত ০.২ (খালি মাটি, ফসল কাটার পরে) থেকে ০.৭ (পূর্ণ ছাউনি) পর্যন্ত হয়। দ্বিমুখী শীর্ষগুলি দুটি ধান চক্রের সাথে সামঞ্জস্যপূর্ণ; সময় ও প্রশস্ততা ফসলের ঘনত্ব ও মৌসুমি অবস্থার তথ্য বহন করে।"
   },
   "methodology.ndvi.limitations.bullet_1": {
     "en": "Cloud cover during the monsoon can produce missing months. The dashboard surfaces these as gaps rather than interpolating.",
-    "bn": null
+    "bn": "বর্ষাকালে মেঘের আবরণ মাস বাদ পড়ার কারণ হতে পারে। ড্যাশবোর্ড এগুলিকে ইন্টারপোলেট না করে ফাঁক হিসেবে প্রদর্শন করে।"
   },
   "methodology.ndvi.limitations.bullet_2": {
     "en": "District-level mean averages over heterogeneous land cover (cropland, settlement, water, forest) and cannot distinguish among them.",
-    "bn": null
+    "bn": "জেলা-পর্যায়ের গড় বিভিন্ন ভূমি আচ্ছাদনের (কৃষিজমি, বসতি, জল, বন) উপর গড় করে এবং সেগুলির মধ্যে পার্থক্য করতে পারে না।"
   },
   "methodology.ndvi.limitations.bullet_3": {
     "en": "NDVI saturates above approximately 0.6 for dense canopies, so peak vegetation differences are compressed.",
-    "bn": null
+    "bn": "ঘন ছাউনির জন্য NDVI প্রায় ০.৬-এর উপরে স্যাচুরেট হয়, তাই শীর্ষ উদ্ভিদের পার্থক্য সংকুচিত হয়।"
   },
   "methodology.ndvi.limitations.bullet_4": {
     "en": "The Sentinel-2 record begins in 2015; longer-term baselines are not available from this sensor alone.",
-    "bn": null
+    "bn": "Sentinel-2-এর রেকর্ড ২০১৫ সালে শুরু হয়; দীর্ঘ-মেয়াদী বেসলাইন শুধুমাত্র এই সেন্সর থেকে পাওয়া যায় না।"
   },
 
   "methodology.ndmi.heading": {
     "en": "2. Surface Moisture (NDMI)",
-    "bn": null
+    "bn": "২. পৃষ্ঠের আর্দ্রতা (NDMI)"
   },
   "methodology.ndmi.description": {
     "en": "NDMI captures water content in vegetation canopies and surface soil. It complements NDVI: where NDVI tracks how much green is present, NDMI tracks how wet that green is.",
-    "bn": null
+    "bn": "NDMI উদ্ভিদ ছাউনি ও পৃষ্ঠের মাটিতে জল উপাদান পরিমাপ করে। এটি NDVI-কে পরিপূরক করে: যেখানে NDVI সবুজের পরিমাণ ট্র্যাক করে, NDMI সেই সবুজ কতটা ভেজা তা ট্র্যাক করে।"
   },
   "methodology.ndmi.formula_caption": {
     "en": "where $B_{8}$ is NIR (842 nm) and $B_{11}$ is SWIR1 (1610 nm).",
-    "bn": null
+    "bn": "যেখানে $B_{8}$ হল NIR (৮৪২ nm) এবং $B_{11}$ হল SWIR1 (১৬১০ nm)।"
   },
   "methodology.ndmi.data_sources.bullet_1": {
     "en": "Identical ingestion path to NDVI: `COPERNICUS/S2_SR_HARMONIZED`, `CLOUDY_PIXEL_PERCENTAGE < 60`, QA60 mask, monthly composites at 100 m, 24-month rolling window.",
-    "bn": null
+    "bn": "NDVI-এর সমান ইনজেশন পাথ: `COPERNICUS/S2_SR_HARMONIZED`, `CLOUDY_PIXEL_PERCENTAGE < 60`, QA60 মাস্ক, ১০০ মি-তে মাসিক কম্পোজিট, ২৪-মাসের রোলিং উইন্ডো।"
   },
   "methodology.ndmi.interpretation": {
     "en": "Higher NDMI indicates more moisture. Tracks irrigation, recent rainfall, and standing water in rice paddies. In Bangladesh, NDMI tends to peak during and just after the monsoon, with a secondary rise during Boro irrigation in the dry season.",
-    "bn": null
+    "bn": "উচ্চতর NDMI আরও আর্দ্রতা নির্দেশ করে। সেচ, সাম্প্রতিক বৃষ্টিপাত ও ধানের জমিতে দাঁড়িয়ে থাকা জল ট্র্যাক করে। বাংলাদেশে, NDMI বর্ষাকালে এবং তার ঠিক পরে শীর্ষে পৌঁছায়, শুষ্ক মৌসুমে বোরো সেচের সময় একটি দ্বিতীয় বৃদ্ধি দেখা যায়।"
   },
   "methodology.ndmi.limitations.bullet_1": {
     "en": "Same cloud-cover constraint as NDVI; missing monsoon months are common.",
-    "bn": null
+    "bn": "NDVI-এর মতোই মেঘ-আচ্ছাদনের সীমাবদ্ধতা; বর্ষার মাসগুলি বাদ পড়া সাধারণ।"
   },
   "methodology.ndmi.limitations.bullet_2": {
     "en": "Saturates over open water surfaces; does not distinguish flooded paddies from natural wetlands.",
-    "bn": null
+    "bn": "খোলা জলের পৃষ্ঠে স্যাচুরেট হয়; প্লাবিত ধানক্ষেতকে প্রাকৃতিক জলাভূমি থেকে আলাদা করে না।"
   },
   "methodology.ndmi.limitations.bullet_3": {
     "en": "Conflates plant water content with soil moisture; the two cannot be separated from a district-level mean.",
-    "bn": null
+    "bn": "উদ্ভিদের জল-উপাদান ও মাটির আর্দ্রতা একত্রে গণনা করে; এই দুটিকে জেলা-পর্যায়ের গড় থেকে পৃথক করা যায় না।"
   },
   "methodology.ndmi.limitations.bullet_4": {
     "en": "SWIR1 is at 20 m native resolution while NIR is at 10 m; both are resampled to a common scale internally by Earth Engine.",
-    "bn": null
+    "bn": "SWIR1-এর নেটিভ রেজোলিউশন ২০ মি যেখানে NIR-এর ১০ মি; উভয়ই Earth Engine অভ্যন্তরীণভাবে একটি সাধারণ স্কেলে রিস্যাম্পল করে।"
   },
 
   "methodology.flood.heading": {
     "en": "3. Flood Inundation Extent",
-    "bn": null
+    "bn": "৩. বন্যার প্লাবন বিস্তৃতি"
   },
   "methodology.flood.description": {
     "en": "Sentinel-1 Synthetic Aperture Radar (SAR) detects standing water by exploiting the fact that smooth water surfaces reflect radar away from the sensor, producing low backscatter values. SAR is unaffected by cloud cover, which makes it the only practical sensor for monsoon-season flood mapping in Bangladesh.",
-    "bn": null
+    "bn": "Sentinel-1 Synthetic Aperture Radar (SAR) দাঁড়িয়ে থাকা জল সনাক্ত করে এই বাস্তবতা কাজে লাগিয়ে যে মসৃণ জলপৃষ্ঠ রাডারকে সেন্সর থেকে দূরে প্রতিফলিত করে, যা নিম্ন ব্যাকস্ক্যাটার মান উৎপন্ন করে। SAR মেঘের আবরণ দ্বারা প্রভাবিত হয় না, যা এটিকে বাংলাদেশে বর্ষা-মৌসুমের বন্যা মানচিত্রায়নের জন্য একমাত্র ব্যবহারিক সেন্সর করে তোলে।"
   },
   "methodology.flood.method.heading": {
     "en": "Method",
-    "bn": null
+    "bn": "পদ্ধতি"
   },
   "methodology.flood.method.intro": {
     "en": "For a given district and event window:",
-    "bn": null
+    "bn": "একটি নির্দিষ্ট জেলা ও ঘটনা উইন্ডোর জন্য:"
   },
   "methodology.flood.method.step_1": {
     "en": "Filter Sentinel-1 GRD to `instrumentMode == 'IW'`, polarization includes `'VV'`, orbit pass `'DESCENDING'` (per published Bangladesh flood literature).",
-    "bn": null
+    "bn": "Sentinel-1 GRD-কে `instrumentMode == 'IW'`, পোলারাইজেশনে `'VV'` অন্তর্ভুক্ত, ও `'DESCENDING'` কক্ষপথে ফিল্টার করুন (বাংলাদেশের প্রকাশিত বন্যা সাহিত্য অনুসারে)।"
   },
   "methodology.flood.method.step_2": {
     "en": "Take the median composite of the VV band over the event window. Median compositing reduces speckle better than mean.",
-    "bn": null
+    "bn": "ঘটনা উইন্ডোর উপর VV ব্যান্ডের মিডিয়ান কম্পোজিট নিন। মিডিয়ান কম্পোজিটিং গড়ের চেয়ে স্পেকল ভালোভাবে কমায়।"
   },
   "methodology.flood.method.step_3": {
     "en": "Apply threshold: VV < −16 dB → water. The −16 dB value is established in published Bangladesh SAR literature.",
-    "bn": null
+    "bn": "থ্রেশহোল্ড প্রয়োগ করুন: VV < −16 dB → জল। −16 dB মান বাংলাদেশের প্রকাশিত SAR সাহিত্যে প্রতিষ্ঠিত।"
   },
   "methodology.flood.method.step_4": {
     "en": "Exclude permanent water using JRC Global Surface Water (occurrence > 50 %) via `flood_water.updateMask(permanent_water.eq(0))`.",
-    "bn": null
+    "bn": "JRC Global Surface Water (occurrence > 50 %) ব্যবহার করে স্থায়ী জল বাদ দিন `flood_water.updateMask(permanent_water.eq(0))`-এর মাধ্যমে।"
   },
   "methodology.flood.method.step_5": {
     "en": "Compute area as `mask × pixelArea` summed within the district polygon.",
-    "bn": null
+    "bn": "জেলার পলিগনের মধ্যে যোগ করা `mask × pixelArea` হিসেবে এলাকা গণনা করুন।"
   },
   "methodology.flood.data_sources.bullet_1": {
     "en": "`COPERNICUS/S1_GRD` (Sentinel-1 Ground Range Detected).",
-    "bn": null
+    "bn": "`COPERNICUS/S1_GRD` (Sentinel-1 Ground Range Detected)।"
   },
   "methodology.flood.data_sources.bullet_2": {
     "en": "`JRC/GSW1_4/GlobalSurfaceWater` for permanent-water exclusion.",
-    "bn": null
+    "bn": "স্থায়ী-জল বাদ দেওয়ার জন্য `JRC/GSW1_4/GlobalSurfaceWater`।"
   },
   "methodology.flood.data_sources.bullet_3": {
     "en": "`FAO/GAUL/2015/level2` for district geometry.",
-    "bn": null
+    "bn": "জেলার জ্যামিতির জন্য `FAO/GAUL/2015/level2`।"
   },
   "methodology.flood.data_sources.bullet_4": {
     "en": "The dashboard currently displays a fixed flood-event window of 25 May – 30 June 2024, corresponding to the Sylhet division event of that monsoon.",
-    "bn": null
+    "bn": "ড্যাশবোর্ড বর্তমানে ২৫ মে – ৩০ জুন ২০২৪-এর একটি নির্দিষ্ট বন্যা-ঘটনা উইন্ডো প্রদর্শন করে, যা সেই বর্ষার সিলেট বিভাগের ঘটনার সাথে সামঞ্জস্যপূর্ণ।"
   },
   "methodology.flood.interpretation": {
     "en": "Flood-only extent is reported in km² and as a fraction of district area. Validated against the 2024 Sylhet event: the dashboard reports 1,301.5 km² flood-only (37.4 % of Sylhet district), which falls within the published reporting range (60–80 % of Sylhet division submerged at peak; Sylhet district itself at 30–40 % across the median of the flood window). A dry-season control test for the same district produces 27.9 km² (0.8 % of district), confirming a 47× contrast between flood and baseline conditions.",
-    "bn": null
+    "bn": "শুধুমাত্র বন্যা-বিস্তৃতি কিমি² এবং জেলার এলাকার ভগ্নাংশ হিসেবে রিপোর্ট করা হয়। ২০২৪ সিলেট ঘটনার বিরুদ্ধে যাচাইকৃত: ড্যাশবোর্ড ১,৩০১.৫ কিমি² শুধুমাত্র বন্যা রিপোর্ট করে (সিলেট জেলার ৩৭.৪ %), যা প্রকাশিত রিপোর্টিং পরিসরে (শীর্ষে সিলেট বিভাগের ৬০–৮০ % নিমজ্জিত; সিলেট জেলা নিজেই বন্যা উইন্ডোর মিডিয়ান জুড়ে ৩০–৪০ %) পড়ে। একই জেলার জন্য একটি শুষ্ক-মৌসুম নিয়ন্ত্রণ পরীক্ষা ২৭.৯ কিমি² (জেলার ০.৮ %) উৎপন্ন করে, যা বন্যা ও বেসলাইন অবস্থার মধ্যে ৪৭× বৈসাদৃশ্য নিশ্চিত করে।"
   },
   "methodology.flood.limitations.bullet_1": {
     "en": "The −16 dB threshold is a population-level value and can produce false positives over tarmac, recently transplanted rice paddies, and other smooth or wet surfaces.",
-    "bn": null
+    "bn": "−16 dB থ্রেশহোল্ড একটি জনসংখ্যা-পর্যায়ের মান এবং পাকা রাস্তা, সম্প্রতি রোপণ করা ধানক্ষেত ও অন্যান্য মসৃণ বা ভেজা পৃষ্ঠের উপর মিথ্যা ইতিবাচক ফলাফল উৎপন্ন করতে পারে।"
   },
   "methodology.flood.limitations.bullet_2": {
     "en": "Median compositing across the flood window understates true peak inundation; the dashboard reports a median, not a peak.",
-    "bn": null
+    "bn": "বন্যা উইন্ডো জুড়ে মিডিয়ান কম্পোজিটিং প্রকৃত শীর্ষ প্লাবনকে কম দেখায়; ড্যাশবোর্ড একটি মিডিয়ান রিপোর্ট করে, শীর্ষ নয়।"
   },
   "methodology.flood.limitations.bullet_3": {
     "en": "The JRC permanent-water threshold (50 % occurrence) is conservative. Pixels that are water for less than half the year are not classified as permanent and may contribute to the flood-only count during normal seasonal expansion of the haor wetlands.",
-    "bn": null
+    "bn": "JRC স্থায়ী-জল থ্রেশহোল্ড (৫০ % occurrence) রক্ষণশীল। যে পিক্সেলগুলি বছরের অর্ধেকের কম সময় জল থাকে সেগুলিকে স্থায়ী হিসেবে শ্রেণীবদ্ধ করা হয় না এবং হাওর জলাভূমির স্বাভাবিক মৌসুমী সম্প্রসারণের সময় শুধুমাত্র-বন্যা গণনায় অবদান রাখতে পারে।"
   },
   "methodology.flood.projection_note.heading": {
     "en": "**Methodological note on projection handling.**",
-    "bn": null
+    "bn": "**প্রজেকশন হ্যান্ডলিং সম্পর্কে পদ্ধতিগত নোট।**"
   },
   "methodology.flood.projection_note.body": {
     "en": "Sentinel-1 has 10 m UTM as its native projection; JRC GSW has 30 m EPSG:4326. Earth Engine operations that mix these two trigger internal resampling that produces fractional values at binary-region boundaries. Algebraic operations such as `.Not()` followed by multiplication, or `.subtract()` between binary images, propagate these fractional values incorrectly through area summation, producing flood extents that under-count the true value by approximately 75 %. This module avoids the artifact by using `updateMask(permanent_water.eq(0))` for the boolean exclusion. Diagnosing this required parallel evaluation of four algebraically equivalent formulations; only `updateMask` and `where` produced correct results.",
-    "bn": null
+    "bn": "Sentinel-1-এর নেটিভ প্রজেকশন ১০ মি UTM; JRC GSW-এর ৩০ মি EPSG:4326। এই দুটি মিশ্রিত করা Earth Engine অপারেশন অভ্যন্তরীণ রিস্যাম্পলিং ট্রিগার করে যা বাইনারি-অঞ্চল সীমানায় ভগ্নাংশ মান উৎপন্ন করে। গুণনের পরে `.Not()`-এর মতো বীজগণিতীয় অপারেশন বা বাইনারি ছবির মধ্যে `.subtract()`, এই ভগ্নাংশ মানগুলি এলাকা যোগের মাধ্যমে ভুলভাবে ছড়িয়ে দেয়, বন্যা বিস্তৃতি উৎপন্ন করে যা প্রকৃত মানকে প্রায় ৭৫ % কম গণনা করে। এই মডিউল বুলিয়ান বর্জনের জন্য `updateMask(permanent_water.eq(0))` ব্যবহার করে আর্টিফ্যাক্ট এড়িয়ে চলে। এটি নির্ণয় করার জন্য চারটি বীজগণিতীয়ভাবে সমতুল্য ফর্মুলেশনের সমান্তরাল মূল্যায়ন প্রয়োজন ছিল; শুধুমাত্র `updateMask` ও `where` সঠিক ফলাফল উৎপন্ন করেছে।"
   },
 
   "methodology.salinity.heading": {
     "en": "4. Coastal Salinity (Bouaziz SI)",
-    "bn": null
+    "bn": "৪. উপকূলীয় লবণাক্ততা (Bouaziz SI)"
   },
   "methodology.salinity.warning": {
     "en": "This indicator is a visible-band brightness proxy, not a calibrated soil-salinity measurement. Read the Limitations subsection before interpreting the displayed values.",
-    "bn": null
+    "bn": "এই সূচকটি একটি দৃশ্যমান-ব্যান্ড উজ্জ্বলতা প্রক্সি, ক্যালিব্রেট করা মাটির লবণাক্ততা পরিমাপ নয়। প্রদর্শিত মান ব্যাখ্যা করার আগে সীমাবদ্ধতা উপ-অংশটি পড়ুন।"
   },
   "methodology.salinity.description": {
     "en": "The Bouaziz Salinity Index measures soil and surface brightness in the visible spectrum. Salt crusts on bare or sparsely vegetated soil brighten visible-band reflectance, so the index is sensitive to salt accumulation. It is also sensitive to other drivers of visible brightness, which is the source of its principal limitation.",
-    "bn": null
+    "bn": "Bouaziz লবণাক্ততা সূচক দৃশ্যমান বর্ণালীতে মাটি ও পৃষ্ঠের উজ্জ্বলতা পরিমাপ করে। খালি বা স্বল্প-উদ্ভিদ মাটিতে লবণের আস্তরণ দৃশ্যমান-ব্যান্ড রিফ্লেকটেন্স উজ্জ্বল করে, তাই সূচকটি লবণ জমার প্রতি সংবেদনশীল। এটি দৃশ্যমান উজ্জ্বলতার অন্যান্য চালকের প্রতিও সংবেদনশীল, যা এর প্রধান সীমাবদ্ধতার উৎস।"
   },
   "methodology.salinity.formula_caption": {
     "en": "where $B_{2}$ is Sentinel-2 Blue (492 nm) and $B_{4}$ is Sentinel-2 Red (665 nm), both in surface reflectance units. The dashboard reports two values per district per year: the dry-season mean (1 March – 31 May) and the monsoon-season mean (1 July – 30 September).",
-    "bn": null
+    "bn": "যেখানে $B_{2}$ হল Sentinel-2 Blue (৪৯২ nm) এবং $B_{4}$ হল Sentinel-2 Red (৬৬৫ nm), উভয়ই সারফেস রিফ্লেকটেন্স এককে। ড্যাশবোর্ড প্রতি জেলার জন্য বার্ষিক দুটি মান রিপোর্ট করে: শুষ্ক-মৌসুমের গড় (১ মার্চ – ৩১ মে) এবং বর্ষা-মৌসুমের গড় (১ জুলাই – ৩০ সেপ্টেম্বর)।"
   },
   "methodology.salinity.data_sources.bullet_1": {
     "en": "`COPERNICUS/S2_SR_HARMONIZED`, `CLOUDY_PIXEL_PERCENTAGE < 60`, QA60 cloud and cirrus mask.",
-    "bn": null
+    "bn": "`COPERNICUS/S2_SR_HARMONIZED`, `CLOUDY_PIXEL_PERCENTAGE < 60`, QA60 মেঘ ও সিরাস মাস্ক।"
   },
   "methodology.salinity.data_sources.bullet_2": {
     "en": "Two seasonal composites per year, reduction at 100 m scale.",
-    "bn": null
+    "bn": "বার্ষিক দুটি মৌসুমী কম্পোজিট, ১০০ মি স্কেলে রিডাকশন।"
   },
   "methodology.salinity.data_sources.bullet_3": {
     "en": "Restricted to 19 coastal districts of Bangladesh defined by the standard government coastal-zone designation.",
-    "bn": null
+    "bn": "সরকারি মানক উপকূলীয়-অঞ্চল নির্ধারণ অনুসারে বাংলাদেশের ১৯টি উপকূলীয় জেলায় সীমাবদ্ধ।"
   },
   "methodology.salinity.interpretation": {
     "en": "The salt-crust hypothesis predicts dry-season SI to exceed monsoon-season SI in saline coastal soils, because dry conditions expose salt crusts that brighten visible bands while monsoon conditions dilute and mask them. The dashboard exposes the seasonal pair so users can read the contrast directly. The contrast is the intended signal, but it is not a clean salinity signal. See Limitations.",
-    "bn": null
+    "bn": "লবণ-আস্তরণ অনুমান পূর্বাভাস দেয় যে লবণাক্ত উপকূলীয় মাটিতে শুষ্ক-মৌসুমের SI বর্ষা-মৌসুমের SI-কে অতিক্রম করবে, কারণ শুষ্ক অবস্থা লবণের আস্তরণ উন্মোচন করে যা দৃশ্যমান ব্যান্ডকে উজ্জ্বল করে, যখন বর্ষা অবস্থা সেগুলিকে লঘু ও আবৃত করে। ড্যাশবোর্ড মৌসুমী জোড়াটি প্রকাশ করে যাতে ব্যবহারকারীরা সরাসরি বৈসাদৃশ্যটি পড়তে পারেন। বৈসাদৃশ্যটি অভিপ্রেত সংকেত, কিন্তু এটি একটি পরিষ্কার লবণাক্ততা সংকেত নয়। সীমাবদ্ধতা দেখুন।"
   },
   "methodology.salinity.limitations.intro_1": {
     "en": "This is the most epistemically fragile indicator in the dashboard. It is not calibrated against ground-truth soil electrical conductivity measurements.",
-    "bn": null
+    "bn": "এটি ড্যাশবোর্ডের সবচেয়ে জ্ঞানতাত্ত্বিকভাবে ভঙ্গুর সূচক। এটি গ্রাউন্ড-ট্রুথ মাটির বৈদ্যুতিক পরিবাহিতা পরিমাপের বিরুদ্ধে ক্যালিব্রেট করা নয়।"
   },
   "methodology.salinity.limitations.intro_2": {
     "en": "The seasonal contrast is influenced by multiple drivers, only one of which is salinity:",
-    "bn": null
+    "bn": "মৌসুমী বৈসাদৃশ্য একাধিক চালক দ্বারা প্রভাবিত, যার মধ্যে শুধুমাত্র একটি হল লবণাক্ততা:"
   },
   "methodology.salinity.limitations.bullet_1": {
     "en": "**Rice phenology.** Boro rice harvest in late dry season (April–May) leaves bare bright fields. Aman rice during the monsoon produces dense green canopy that darkens visible bands. Both shifts independently push dry SI up and monsoon SI down.",
-    "bn": null
+    "bn": "**ধানের ফেনোলজি।** শুষ্ক মৌসুমের শেষে (এপ্রিল–মে) বোরো ধান কাটা খালি উজ্জ্বল ক্ষেত রেখে যায়। বর্ষায় আমন ধান ঘন সবুজ ছাউনি তৈরি করে যা দৃশ্যমান ব্যান্ডকে অন্ধকার করে। উভয় পরিবর্তন স্বাধীনভাবে শুষ্ক SI বাড়ায় এবং বর্ষা SI কমায়।"
   },
   "methodology.salinity.limitations.bullet_2": {
     "en": "**Aquaculture.** Shrimp ponds in southwestern coastal districts cover large fractions of district area year-round. Their water surfaces darken visible bands. The seasonal management cycle of these ponds (filling, draining, harvest) further influences seasonal SI.",
-    "bn": null
+    "bn": "**মৎস্য চাষ।** দক্ষিণ-পশ্চিম উপকূলীয় জেলাগুলিতে চিংড়ির ঘের বছরব্যাপী জেলার এলাকার বড় অংশ আচ্ছাদন করে। তাদের জলপৃষ্ঠ দৃশ্যমান ব্যান্ডকে অন্ধকার করে। এই ঘেরগুলির মৌসুমী ব্যবস্থাপনা চক্র (ভর্তি, খালি, ফসল) আরও মৌসুমী SI-কে প্রভাবিত করে।"
   },
   "methodology.salinity.limitations.bullet_3": {
     "en": "**Cloud-mask survivor bias.** The < 60 % cloud filter retains a substantially smaller scene count during the monsoon than during the dry season. Monsoon scenes that pass the filter are atmospherically atypical days, often with elevated aerosol loading, which can artificially brighten visible bands.",
-    "bn": null
+    "bn": "**মেঘ-মাস্ক সারভাইভর বায়াস।** < ৬০ % মেঘ ফিল্টার বর্ষাকালের তুলনায় শুষ্ক মৌসুমে উল্লেখযোগ্যভাবে কম দৃশ্য সংখ্যা ধরে রাখে। ফিল্টার পাস করা বর্ষার দৃশ্যগুলি বায়ুমণ্ডলীয়ভাবে অস্বাভাবিক দিনের, প্রায়শই উন্নত অ্যারোসল লোডিং সহ, যা কৃত্রিমভাবে দৃশ্যমান ব্যান্ডকে উজ্জ্বল করতে পারে।"
   },
   "methodology.salinity.empirical.heading": {
     "en": "**Empirical observation supporting the caveat.**",
-    "bn": null
+    "bn": "**সতর্কতা সমর্থনকারী অভিজ্ঞতাভিত্তিক পর্যবেক্ষণ।**"
   },
   "methodology.salinity.empirical.body": {
     "en": "As of the 2024 calendar year, the dashboard reports for Khulna (a heavily aquaculture-dominated southwestern coastal district): dry-season SI ≈ 0.084, monsoon-season SI ≈ 0.104 — inverted relative to the salt-crust hypothesis. For Cox's Bazar (a southeastern coastal district with conventional Aman-dominant agriculture): dry-season SI ≈ 0.113, monsoon-season SI ≈ 0.097 — consistent with the hypothesis. Both directions are explainable by local geography. Neither should be read as evidence that one district is more saline than the other.",
-    "bn": null
+    "bn": "২০২৪ ক্যালেন্ডার বছরে ড্যাশবোর্ড খুলনার জন্য (একটি ভারী মৎস্য-চাষ-প্রভাবিত দক্ষিণ-পশ্চিম উপকূলীয় জেলা) রিপোর্ট করে: শুষ্ক-মৌসুম SI ≈ ০.০৮৪, বর্ষা-মৌসুম SI ≈ ০.১০৪ — লবণ-আস্তরণ অনুমানের সাপেক্ষে বিপরীত। কক্সবাজারের জন্য (প্রচলিত আমন-প্রভাবিত কৃষি সহ একটি দক্ষিণ-পূর্ব উপকূলীয় জেলা): শুষ্ক-মৌসুম SI ≈ ০.১১৩, বর্ষা-মৌসুম SI ≈ ০.০৯৭ — অনুমানের সাথে সঙ্গতিপূর্ণ। উভয় দিকই স্থানীয় ভূগোল দ্বারা ব্যাখ্যাযোগ্য। কোনোটিকেই একটি জেলা অন্যটির চেয়ে বেশি লবণাক্ত হওয়ার প্রমাণ হিসেবে পড়া উচিত নয়।"
   },
   "methodology.salinity.sarkar.heading": {
     "en": "**Relationship to Sarkar et al. 2023.**",
-    "bn": null
+    "bn": "**Sarkar et al. ২০২৩-এর সাথে সম্পর্ক।**"
   },
   "methodology.salinity.sarkar.body": {
     "en": "The project specification originally cited Sarkar et al. (2023, *Scientific Reports* 13:17056) as the salinity methodology source. That paper uses Landsat 8 OLI imagery (not Sentinel-2), 13 spectral indices as features, and three machine-learning models (Random Forest, Bagging+RF, Artificial Neural Network) trained on 241 ground-truth electrical conductivity samples from a single upazila in Satkhira District. Their best model achieves AUC 0.921 and produces a 5-class soil salinity zone map. We did not replicate Sarkar's pipeline; we have neither ground-truth samples nor a pre-trained network. We adopted the Bouaziz Salinity Index from the broader remote-sensing literature (Bouaziz et al. 2011) as a defensible proxy that uses bands distinct from NDVI and NDMI and that has a transparent published formula. The ML approach in Sarkar et al. is a stronger methodology than ours; reproducing it would require ground-truth EC data we do not have access to.",
-    "bn": null
+    "bn": "প্রকল্প স্পেসিফিকেশন মূলত Sarkar et al. (২০২৩, *Scientific Reports* 13:17056)-কে লবণাক্ততা পদ্ধতির উৎস হিসেবে উদ্ধৃত করেছিল। সেই পেপারটি Landsat 8 OLI চিত্র (Sentinel-2 নয়), বৈশিষ্ট্য হিসেবে ১৩টি বর্ণালী সূচক, এবং সাতক্ষীরা জেলার একটি একক উপজেলা থেকে ২৪১টি গ্রাউন্ড-ট্রুথ বৈদ্যুতিক পরিবাহিতা নমুনায় প্রশিক্ষিত তিনটি মেশিন-লার্নিং মডেল (Random Forest, Bagging+RF, Artificial Neural Network) ব্যবহার করে। তাদের সেরা মডেল AUC ০.৯২১ অর্জন করে এবং ৫-শ্রেণীর মাটির লবণাক্ততা অঞ্চল মানচিত্র উৎপন্ন করে। আমরা Sarkar-এর পাইপলাইন পুনরুৎপাদন করিনি; আমাদের কাছে গ্রাউন্ড-ট্রুথ নমুনা বা প্রাক-প্রশিক্ষিত নেটওয়ার্ক কোনোটাই নেই। আমরা NDVI ও NDMI থেকে আলাদা ব্যান্ড ব্যবহার করে এবং একটি স্বচ্ছ প্রকাশিত সূত্র সহ একটি যৌক্তিক প্রক্সি হিসেবে বিস্তৃত রিমোট-সেন্সিং সাহিত্য (Bouaziz et al. 2011) থেকে Bouaziz লবণাক্ততা সূচক গ্রহণ করেছি। Sarkar et al.-এর ML পদ্ধতি আমাদের চেয়ে শক্তিশালী পদ্ধতিগত পন্থা; এটি পুনরুৎপাদন করতে গ্রাউন্ড-ট্রুথ EC ডেটা প্রয়োজন যা আমাদের অ্যাক্সেস নেই।"
   },
 
   "methodology.cross_cutting.heading": {
     "en": "Cross-Cutting Notes",
-    "bn": null
+    "bn": "সাধারণ পর্যবেক্ষণ"
   },
   "methodology.cross_cutting.bullet_1": {
     "en": "All Sentinel-2-based indicators (NDVI, NDMI, salinity) are subject to cloud-cover gaps during the monsoon. Sentinel-1 SAR (used for flood) is the only sensor in this dashboard that is unaffected by cloud cover.",
-    "bn": null
+    "bn": "সমস্ত Sentinel-2-ভিত্তিক সূচক (NDVI, NDMI, লবণাক্ততা) বর্ষাকালে মেঘ-আবরণ ফাঁকের সাপেক্ষে। Sentinel-1 SAR (বন্যার জন্য ব্যবহৃত) এই ড্যাশবোর্ডে একমাত্র সেন্সর যা মেঘের আবরণ দ্বারা প্রভাবিত নয়।"
   },
   "methodology.cross_cutting.bullet_2": {
     "en": "Earth Engine operations on images with different native projections require careful method selection, as documented in the Flood section. The pattern is general: use `updateMask` or `where` for boolean operations between differently-projected images; avoid `.Not()` chained with multiplication and `.subtract()` between binary images.",
-    "bn": null
+    "bn": "বিভিন্ন নেটিভ প্রজেকশনের চিত্রগুলিতে Earth Engine অপারেশনের জন্য সাবধানে পদ্ধতি নির্বাচন প্রয়োজন, যেমন বন্যা অংশে নথিভুক্ত। প্যাটার্নটি সাধারণ: ভিন্ন-প্রজেক্ট করা চিত্রের মধ্যে বুলিয়ান অপারেশনের জন্য `updateMask` বা `where` ব্যবহার করুন; বাইনারি চিত্রের মধ্যে গুণনের সাথে `.Not()` চেইন এবং `.subtract()` এড়িয়ে চলুন।"
   },
   "methodology.cross_cutting.bullet_3": {
     "en": "The dashboard runs on the Earth Engine Community Tier (free for non-commercial use). Aggressive caching of district-level results minimizes repeat compute; cold-cache district selections take 20–30 seconds, warm cache returns instantly.",
-    "bn": null
+    "bn": "ড্যাশবোর্ড Earth Engine Community Tier-এ চলে (অ-বাণিজ্যিক ব্যবহারের জন্য বিনামূল্যে)। জেলা-পর্যায়ের ফলাফলের আগ্রাসী ক্যাশিং পুনরাবৃত্ত গণনাকে ন্যূনতম করে; কোল্ড-ক্যাশ জেলা নির্বাচন ২০–৩০ সেকেন্ড নেয়, ওয়ার্ম ক্যাশ তাৎক্ষণিকভাবে ফেরত দেয়।"
   },
 
   "methodology.references.heading": {
     "en": "References",
-    "bn": null
+    "bn": "তথ্যসূত্র"
   }
 }
