@@ -89,7 +89,7 @@ When a user opens the live URL and selects a district:
 
 ### 3.1 Languages and Runtimes
 
-- **Python 3.11** locally on Windows. Streamlit Cloud is currently running Python 3.14.4. The codebase is compatible with both. Avoid 3.12-only features.
+- **Python 3.11+**. Streamlit Cloud is currently running Python 3.14.4. The codebase is compatible with both.
 - **JavaScript** is not directly written. Streamlit emits JS automatically; folium produces JS-bearing HTML via Jinja2 templates.
 
 ### 3.2 Core Libraries
@@ -121,18 +121,18 @@ Pinning policy: lower bounds only (`>=`), no upper bounds, no exact pins. This p
 
 The `init_ee()` function in `atlas/ee_client.py` is dual-mode:
 
-- **Cloud mode (Streamlit Cloud):** Reads `st.secrets["gcp_service_account"]` (a TOML-formatted block containing the full service account JSON), constructs `ee.ServiceAccountCredentials`, and initializes Earth Engine against project `earth-engine-project-495404`.
-- **Local mode (development laptop):** When `st.secrets` is absent or the secrets key is not present, the function falls through to bare `ee.Initialize(project="earth-engine-project-495404")`, which uses credentials cached by `earthengine authenticate` in the developer's home directory.
+- **Cloud mode (Streamlit Cloud):** Reads `st.secrets["gcp_service_account"]` (a TOML-formatted block containing the full service account JSON), constructs `ee.ServiceAccountCredentials`, and initializes Earth Engine against the configured project.
+- **Local mode (development laptop):** When `st.secrets` is absent or the secrets key is not present, the function falls through to bare `ee.Initialize(project=<configured project>)`, which uses credentials cached by `earthengine authenticate` in the developer's home directory.
 
 The function is idempotent. Repeated calls do not reinitialize.
 
 ### 4.2 Project Configuration
 
-- **Google Cloud project ID:** `earth-engine-project-495404`
-- **Project type:** Non-commercial / academic (eligible via Berea College affiliation)
-- **Quota tier:** Earth Engine Community Tier (free, default for non-commercial)
-- **Service account:** `streamlit-runner@earth-engine-project-495404.iam.gserviceaccount.com`
-- **Service account roles:** `Earth Engine Resource Viewer`, `Service Usage Consumer`
+- **Google Cloud project ID:** redacted; configured via Streamlit Cloud secrets.
+- **Project type:** non-commercial / academic.
+- **Quota tier:** Earth Engine Community Tier (free, default for non-commercial).
+- **Service account:** `<runner>@<project>.iam.gserviceaccount.com`, configured via Streamlit Cloud secrets.
+- **Service account roles:** `Earth Engine Resource Viewer`, `Service Usage Consumer`.
 
 The two-role requirement is non-obvious. `Earth Engine Resource Viewer` alone allows the service account to read EE assets but not to use the project's API quota. `Service Usage Consumer` permits API consumption. Without both, EE calls return HTTP 403 with `Caller does not have required permission to use project ... Grant the caller the roles/serviceusage.serviceUsageConsumer role`.
 
@@ -309,20 +309,11 @@ Streamlit Cloud rebuilds with the prior state. No history rewriting; no force-pu
 
 ### 9.1 Service Account Credentials
 
-The Earth Engine service account JSON is sensitive. Treatment:
-
-- **Storage on developer machine:** `C:\Users\mahimm\OneDrive - Berea College\Documents\bcra-secrets\` — outside the repository root.
-- **Storage on Streamlit Cloud:** Streamlit Cloud's Secrets UI (Settings → Secrets) under TOML key `[gcp_service_account]`. Streamlit's secrets store is not visible in build logs or app logs.
-- **Repository exposure:** `.gitignore` excludes `*.json` patterns within the repo root. The `bcra-secrets` directory is outside the repo entirely.
-- **Rotation policy:** Any time a key is exposed (logged conversation, screenshot, file shared outside the intended path), the key is treated as compromised and rotated immediately. This has happened once during development; the prior key is revoked.
+The Earth Engine service account JSON is sensitive and is never committed to the repository. The `.gitignore` excludes the `.streamlit/secrets.toml` path. On Streamlit Cloud, secrets are injected via the platform's Secrets UI under the TOML key `[gcp_service_account]` and are not visible in build or runtime logs.
 
 ### 9.2 Public Repository Surface
 
-The repository is public. This means:
-
-- No secrets are ever committed.
-- Configuration that contains identifiers but not secrets (project ID, service account email) is acceptable to commit.
-- Code review for accidental exposure happens on every commit via `git status` inspection before `git add`.
+The repository is public. No secrets are committed at any point — the `.gitignore` excludes `.streamlit/secrets.toml`, and infrastructure identifiers (project ID, service account address) are configured at runtime via Streamlit Cloud secrets rather than being recorded in the repo. Code review for accidental exposure happens on every commit via `git status` inspection before `git add`.
 
 ### 9.3 Streamlit Cloud Trust Model
 
@@ -347,7 +338,6 @@ The following limitations are inherent to the design and are documented for tran
 ### 10.3 General
 
 - **Free hosting cold starts.** The first user request after a period of inactivity takes 10 to 30 seconds. Universal across free hosting tiers.
-- **Single-developer pace.** No staging environment; pushes go directly to production. The cost is acceptable given Streamlit Cloud preserves the prior version on bad deploys.
 
 ## 11. Future Extensibility
 
@@ -381,7 +371,3 @@ Architecture is country-agnostic. Adding Bhutan, Nepal, or Myanmar requires:
 ### 11.4 API Surface
 
 A future REST endpoint could expose the same per-district indicators as JSON. Separate module that imports `atlas/*` and exposes via FastAPI or Flask. Streamlit and JSON API can coexist.
-
----
-
-*End of architectural specification. This document is a living artifact; update it whenever architectural decisions change.*

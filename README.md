@@ -56,14 +56,4 @@ docs/project_spec.md            Architectural reference
 
 ## Tech stack
 
-<<<<<<< HEAD
-Python 3.11 (local) / 3.14 (Streamlit Cloud). Streamlit + streamlit-folium for
-UI. `earthengine-api` for Earth Engine access. folium, plotly, pandas for
-rendering and shaping. FAO GAUL 2015 admin level 2 for district boundaries.
-
-## Maintainer
-
-Mushfiq Mahim — mahimm@berea.edu
-=======
 Python · Streamlit · streamlit-folium · Google Earth Engine (`earthengine-api`) · folium · Plotly · pandas · FAO GAUL 2015 admin-level-2 boundaries.
->>>>>>> a62c671 (Repo cleanup: remove operational artifacts, rewrite README, tighten spec)
