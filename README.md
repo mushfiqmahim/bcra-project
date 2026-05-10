@@ -81,10 +81,6 @@ Python 3.11 (local) / 3.14 (Streamlit Cloud). Streamlit + streamlit-folium for
 UI. `earthengine-api` for Earth Engine access. folium, plotly, pandas for
 rendering and shaping. FAO GAUL 2015 admin level 2 for district boundaries.
 
-## License
-
-MIT — see [`LICENSE`](LICENSE).
-
 ## Maintainer
 
 Mushfiq Mahim — mahimm@berea.edu
