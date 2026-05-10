@@ -1,8 +1,10 @@
 __pycache__/
 *.pyc
+*.log
+*.html
+.ipynb_checkpoints/
 .venv/
 env/
 venv/
 .vscode/
-.streamlit/secrets.toml*.log
 .streamlit/secrets.toml

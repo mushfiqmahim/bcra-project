@@ -1,10 +1,6 @@
 # Bangladesh Climate Risk Atlas — Project Specification
 
-**Repository:** `mushfiqmahim/bcra-project`
-**Live application:** https://bcra-project-bd.streamlit.app
-**Document version:** 2.0 — Refreshed after Phase D notebook completion.
-**Status:** Phase C complete in production; Phase D notebook validated, awaiting refactor and live wiring.
-**Maintainer:** Mushfiq Mahim (mahimm@berea.edu)
+Architecture reference for the Bangladesh Climate Risk Atlas.
 
 ---
 
@@ -12,12 +8,12 @@
 
 The Bangladesh Climate Risk Atlas (BCRA) is a free, public, web-based geospatial analytics dashboard that exposes satellite-derived climate-risk indicators for every district of Bangladesh through a unified interface. The system fetches imagery and runs reductions on Google Earth Engine, presents results through a Streamlit web application, and is deployed as free public infrastructure on Streamlit Community Cloud.
 
-Four climate indicators are planned for the initial release:
+Four climate indicators ship in the application:
 
-1. Vegetation health (NDVI) from Sentinel-2 — implemented and live.
-2. Flood inundation extent from Sentinel-1 SAR — sandbox validated, refactor pending.
-3. Drought and moisture stress (NDMI) from Sentinel-2 — pending.
-4. Coastal salinity proxy from Sentinel-2 spectral combinations — pending.
+1. Vegetation health (NDVI) from Sentinel-2.
+2. Flood inundation extent from Sentinel-1 SAR.
+3. Surface moisture (NDMI) from Sentinel-2.
+4. Coastal salinity proxy from Sentinel-2 spectral combinations.
 
 Each indicator is computed at the administrative-district level (FAO GAUL admin level 2), cached aggressively to minimize Earth Engine quota usage, and rendered in the user interface either as a time-series chart (NDVI, NDMI) or as a map overlay (flood, salinity). The system is bilingual (English plus Bangla labels) and operates without user accounts, telemetry, or any payment processing.
 
@@ -81,11 +77,10 @@ When a user opens the live URL and selects a district:
 | `app.py` | UI orchestration, layout, widget state, Streamlit page configuration |
 | `atlas/ee_client.py` | Earth Engine initialization with dual-mode authentication |
 | `atlas/ndvi.py` | NDVI time-series computation (Sentinel-2 ingestion, masking, monthly composites) |
-| `atlas/flood.py` (planned) | Sentinel-1 SAR flood detection |
-| `atlas/moisture.py` (planned) | NDMI and drought composite |
-| `atlas/salinity.py` (planned) | Coastal salinity proxy |
-| `atlas/maps.py` (planned) | folium helpers for EE tile layers |
-| `atlas/i18n.py` (planned) | English/Bangla string lookup |
+| `atlas/flood.py` | Sentinel-1 SAR flood detection |
+| `atlas/moisture.py` | NDMI and surface-moisture time series |
+| `atlas/salinity.py` | Coastal salinity proxy |
+| `atlas/i18n.py` | English/Bangla string lookup |
 | `data/` | Pre-computed static assets (boundaries, baselines, reference layers) |
 | `notebooks/` | Sandbox experimentation, one notebook per indicator |
 | `scripts/` | Smoke tests and operational utilities |
@@ -106,7 +101,7 @@ When a user opens the live URL and selects a district:
 | `pandas` | `>=2.2` | Tabular data structures for time-series outputs |
 | `plotly` | `>=5.20` | Interactive charts (line, scatter) |
 | `folium` | `>=0.20` | Leaflet-based interactive maps for spatial layers |
-| `streamlit-folium` | future | Component for embedding folium in Streamlit (Phase D wiring) |
+| `streamlit-folium` | `>=0.15` | Component for embedding folium in Streamlit |
 
 Pinning policy: lower bounds only (`>=`), no upper bounds, no exact pins. This permits Streamlit Cloud's transitive resolver to pick compatible versions without lockfile maintenance. For a single-developer portfolio project this trades reproducibility risk for setup simplicity.
 
@@ -158,7 +153,7 @@ The current production NDVI pipeline avoids this by stacking N monthly composite
 
 ## 5. Data Pipeline Designs
 
-### 5.1 NDVI (Implemented)
+### 5.1 NDVI
 
 Module: `atlas/ndvi.py`
 
@@ -182,9 +177,9 @@ def ndvi_timeseries(
 ) -> pd.DataFrame
 ```
 
-### 5.2 Flood Detection (Sandbox Validated, Refactor Pending)
+### 5.2 Flood Detection
 
-Reference: `notebooks/02_flood_sandbox.ipynb`
+Module: `atlas/flood.py` (reference notebook: `notebooks/02_flood_sandbox.ipynb`)
 
 Pipeline:
 
@@ -193,7 +188,7 @@ Pipeline:
 3. **Sentinel-1 ingestion.** Filter `COPERNICUS/S1_GRD` by district bounds, with `instrumentMode == 'IW'`, polarization list containing `'VV'`, and orbit pass `'DESCENDING'`. Descending pass is the conventional choice for Bangladesh flood mapping per published literature.
 4. **Median compositing.** Reduce both windows to median composites of the VV band. Median reduces SAR speckle noise more effectively than mean.
 5. **Thresholding.** Apply a threshold of -16 dB to the flood-window VV composite. Pixels below -16 dB are classified as water. This threshold is validated for Bangladesh in Thomas et al. (2019), MDPI Remote Sensing 11:1581.
-6. **Permanent-water masking.** Load `JRC/GSW1_4/GlobalSurfaceWater`, select the `occurrence` band, threshold at `> 50` to define permanent water, `unmask(0)` to remove the dataset's no-data mask. Apply via `flood_water.updateMask(permanent_water.eq(0))`. The `updateMask` route is required; alternatives using `.Not()` or `.subtract()` produce projection-resampling artifacts that under-count flood extent by 70% or more (see `build_log.md` for the diagnostic record).
+6. **Permanent-water masking.** Load `JRC/GSW1_4/GlobalSurfaceWater`, select the `occurrence` band, threshold at `> 50` to define permanent water, `unmask(0)` to remove the dataset's no-data mask. Apply via `flood_water.updateMask(permanent_water.eq(0))`. The `updateMask` route is required; alternatives using `.Not()` or `.subtract()` produce projection-resampling artifacts that under-count flood extent by 70% or more.
 7. **Area accounting.** Compute area in square kilometers via `image.multiply(ee.Image.pixelArea()).divide(1e6)` summed within the district polygon.
 
 Validation results (Sylhet, 2024 monsoon event):
@@ -203,13 +198,17 @@ Validation results (Sylhet, 2024 monsoon event):
 - Dry-season false-positive control (February-March 2024): 27.9 km² (0.8% of district)
 - Contrast ratio: 47x (flood vs. dry-season)
 
-### 5.3 NDMI / Drought (Planned)
+### 5.3 NDMI
 
-Structurally similar to NDVI: same Sentinel-2 ingestion, same cloud masking, same monthly compositing. The band formula changes from `(B8 - B4) / (B8 + B4)` to `(B8 - B11) / (B8 + B11)`. A drought composite combines NDVI and NDMI anomalies relative to a 5-year baseline.
+Module: `atlas/moisture.py`
 
-### 5.4 Coastal Salinity (Planned)
+Structurally similar to NDVI: same Sentinel-2 ingestion, same cloud masking, same monthly compositing. The band formula changes from `(B8 - B4) / (B8 + B4)` to `(B8 - B11) / (B8 + B11)`.
 
-Restricted to the 19 coastal districts (hard-coded list in `data/coastal_districts.json`). Spectral combination from Sarkar et al. (2023), Scientific Reports 13:17056. Output is a single value per district with seasonal context, not a time series. Methodology page documents that this is a remote-sensing proxy, not a calibrated EC measurement.
+### 5.4 Coastal Salinity
+
+Module: `atlas/salinity.py`
+
+Restricted to the 19 coastal districts (hard-coded list in `data/coastal_districts.json`). Uses the Bouaziz (2011) salinity index `SI = √(B2 × B4)` over Sentinel-2 SR Harmonized imagery. Output is two seasonal means (dry-season and wet-season) per district, not a time series. The methodology page documents that this is a visible-band brightness proxy, not a calibrated soil-EC measurement.
 
 ## 6. Module Structure
 
@@ -220,33 +219,36 @@ bcra-project/
 |-- runtime.txt                 Python version pin (advisory; cloud may override)
 |-- README.md                   Public-facing project description
 |-- LICENSE                     MIT
-|-- .gitignore                  Excludes secrets, logs, HTML artifacts
+|-- .gitignore                  Excludes secrets, logs, caches, HTML artifacts
 |-- .streamlit/
-|   |-- config.toml             (planned) theme overrides
 |   `-- secrets.toml            NOT committed; for local Cloud-mode testing
 |-- atlas/                      Python package for domain logic
 |   |-- __init__.py             Empty package marker
 |   |-- ee_client.py            Earth Engine init (dual-mode)
-|   |-- ndvi.py                 Sentinel-2 NDVI time series (production)
-|   |-- flood.py                (planned) Sentinel-1 SAR flood detection
-|   |-- moisture.py             (planned) NDMI / drought composite
-|   |-- salinity.py             (planned) coastal salinity proxy
-|   |-- maps.py                 (planned) folium helpers for EE tile layers
-|   `-- i18n.py                 (planned) English / Bangla string dictionaries
+|   |-- ndvi.py                 Sentinel-2 NDVI time series
+|   |-- moisture.py             Sentinel-2 NDMI time series
+|   |-- flood.py                Sentinel-1 SAR flood detection
+|   |-- salinity.py             Sentinel-2 Bouaziz salinity index
+|   |-- exports.py              CSV serialization helpers
+|   |-- i18n.py                 English / Bangla string dictionaries
+|   `-- ui.py                   Shared sidebar chrome and footer
+|-- pages/
+|   `-- methodology.py          Methodology page (Streamlit multi-page)
 |-- data/
-|   |-- gadm_bd_admin2.geojson  (planned) pre-downloaded boundaries
-|   `-- coastal_districts.json  (planned) coastal district codes
+|   |-- coastal_districts.json  Coastal district names (FAO GAUL spelling)
+|   `-- strings.json            Bilingual i18n dictionary
 |-- notebooks/
 |   |-- 01_ndvi_sandbox.ipynb   NDVI sandbox; Rangpur and Khulna validation
 |   `-- 02_flood_sandbox.ipynb  Sentinel-1 flood sandbox; Sylhet 2024 validation
 |-- scripts/
-|   `-- verify_ndvi.py          Smoke test for atlas/ndvi.py
+|   |-- verify_ndvi.py          Smoke test for atlas/ndvi.py
+|   |-- verify_ndmi.py          Smoke test for atlas/moisture.py
+|   |-- verify_flood.py         Smoke test for atlas/flood.py
+|   |-- verify_salinity.py      Smoke test for atlas/salinity.py
+|   |-- verify_exports.py       Smoke test for atlas/exports.py
+|   `-- verify_i18n.py          Smoke test for atlas/i18n.py
 `-- docs/
-    |-- project_spec.md         This document
-    |-- session_handoff.md      Current state and next actions
-    |-- build_log.md            Chronological development log
-    |-- methodology.md          (planned) Public-facing methodology with citations
-    `-- data_sources.md         (planned) Detailed data source documentation
+    `-- project_spec.md         This document
 ```
 
 ## 7. Caching Strategy
@@ -257,7 +259,7 @@ Caching is a first-class concern, not a performance optimization. Earth Engine q
 
 - **District list:** TTL 24 hours. The list of 64 Bangladesh districts changes never; we cache for 24 hours as a defensive bound.
 - **Per-district NDVI:** TTL 1 hour. New Sentinel-2 imagery becomes available roughly every 5 days; sub-hour freshness is unnecessary.
-- **Per-district flood (planned):** TTL 6 hours. Sentinel-1 revisits every 6 to 12 days; finer granularity is meaningless.
+- **Per-district flood:** TTL 6 hours. Sentinel-1 revisits every 6 to 12 days; finer granularity is meaningless.
 
 Cache keys are derived from function arguments. Two users selecting the same district both hit the cache, so quota usage scales with unique district selections, not page views.
 
@@ -265,9 +267,8 @@ Cache keys are derived from function arguments. Two users selecting the same dis
 
 Assets that do not depend on user interaction or current data should be pre-computed and committed to `data/`:
 
-- District boundary GeoJSON (`gadm_bd_admin2.geojson`)
-- Coastal district code list (`coastal_districts.json`)
-- 5-year NDVI baseline composites (planned for Phase G — Parquet format with one column per district)
+- Coastal district name list (`coastal_districts.json`)
+- Bilingual i18n strings (`strings.json`)
 
 Pre-computed assets are never regenerated at request time. Updates happen offline on the developer's machine and are committed.
 
@@ -341,7 +342,7 @@ The following limitations are inherent to the design and are documented for tran
 - **Threshold sensitivity.** The -16 dB threshold is a population-level value validated for Bangladesh. It can produce false positives over tarmac, parking lots, and wet rice paddies during transplanting (which appear water-like to SAR).
 - **Median composite hides peak.** The median across the flood window understates the true peak inundation. A user looking at the May 25 - June 30 composite for Sylhet sees the typical inundation across that period, not the worst day.
 - **JRC permanent water mask is conservative.** The 50% occurrence threshold excludes seasonal water (haor edges that are wet 30 to 50% of months) from the permanent layer. Our flood-only count may include normal seasonal expansion of the haor. The dry-season control test confirms this is a small contribution (under 1% of district area).
-- **Projection-resampling artifacts.** Operations that mix images at different native projections (Sentinel-1 at 10m UTM versus JRC GSW at 30m EPSG:4326) require careful method selection. `updateMask` and `where` produce correct results; `Not()`-based and `subtract`-based formulations of the same logical operation produce incorrect results due to fractional resampling values. The diagnostic process is recorded in `build_log.md`.
+- **Projection-resampling artifacts.** Operations that mix images at different native projections (Sentinel-1 at 10m UTM versus JRC GSW at 30m EPSG:4326) require careful method selection. `updateMask` and `where` produce correct results; `Not()`-based and `subtract`-based formulations of the same logical operation produce incorrect results due to fractional resampling values.
 
 ### 10.3 General
 
